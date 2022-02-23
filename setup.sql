@@ -29,12 +29,22 @@ CREATE TABLE "chathamabate/jdg"."games" (
     player_2 INTEGER,
     player_3 INTEGER,
     player_4 INTEGER,
-    PRIMARY KEY (gid)
+    PRIMARY KEY (gid),
+
+    -- All players must exist in the player table!
+    CONSTRAINT p1 
+        FOREIGN KEY(player_1) REFERENCES "chathamabate/jdg"."players"(pid),
+    CONSTRAINT p2 
+        FOREIGN KEY(player_2) REFERENCES "chathamabate/jdg"."players"(pid),
+    CONSTRAINT p3 
+        FOREIGN KEY(player_3) REFERENCES "chathamabate/jdg"."players"(pid),
+    CONSTRAINT p4 
+        FOREIGN KEY(player_4) REFERENCES "chathamabate/jdg"."players"(pid)
 );
 
 -- Insert First Game 
 INSERT INTO "chathamabate/jdg"."games" (gid, game_start, loc, player_1, player_2, player_3, player_4)
-VALUES (0, '3-23-2022 10:00 PM', 'Jones', 1, 4, 7, 3);
+VALUES (1, '3-23-2022 10:00 PM', 'Jones', 1, 4, 7, 3);
 
 -- Insert Arbitrary Game.
 INSERT INTO "chathamabate/jdg"."games" (gid, game_start, loc, player_1, player_2, player_3, player_4)
@@ -42,4 +52,3 @@ VALUES
     ((SELECT MAX(gid) + 1 FROM "chathamabate/jdg"."games"), 
     '3-23-2022 10:00 PM', 'Jones', 1, 4, 7, 3);
 
--- Josh, Robert, Alyson, Megan
