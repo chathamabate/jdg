@@ -1,7 +1,7 @@
 
 -- Players Table
 CREATE TABLE "chathamabate/jdg"."players" (
-    pid INTEGER NOT NULL, 
+    pid INTEGER, 
     firstname VARCHAR(255),
     lastname VARCHAR(255),
     college VARCHAR(255),
@@ -20,35 +20,72 @@ VALUES
     'Anastasia', 'Alexander', 'McMurtry', '01-07-1999');
 
 
--- Games Table
+
+-- Games Table (Just gives logistical information about the game)
 CREATE TABLE "chathamabate/jdg"."games" (
-    gid INTEGER NOT NULL, 
+    gid INTEGER, 
+    league_match BOOLEAN DEFAULT FALSE,
     game_start TIMESTAMP,
     loc VARCHAR(255),
-    player_1 INTEGER, -- These are in order of rotation.
-    player_2 INTEGER,
-    player_3 INTEGER,
-    player_4 INTEGER,
-    PRIMARY KEY (gid),
-
-    -- All players must exist in the player table!
-    CONSTRAINT p1 
-        FOREIGN KEY(player_1) REFERENCES "chathamabate/jdg"."players"(pid),
-    CONSTRAINT p2 
-        FOREIGN KEY(player_2) REFERENCES "chathamabate/jdg"."players"(pid),
-    CONSTRAINT p3 
-        FOREIGN KEY(player_3) REFERENCES "chathamabate/jdg"."players"(pid),
-    CONSTRAINT p4 
-        FOREIGN KEY(player_4) REFERENCES "chathamabate/jdg"."players"(pid)
+    PRIMARY KEY (gid)
 );
 
--- Insert First Game 
-INSERT INTO "chathamabate/jdg"."games" (gid, game_start, loc, player_1, player_2, player_3, player_4)
-VALUES (1, '3-23-2022 10:00 PM', 'Jones', 1, 4, 7, 3);
+-- Insert First Game.
+INSERT INTO "chathamabate/jdg"."games" (gid, league_match, game_start, loc)
+VALUES (0, TRUE, '3-23-2022 10:00 PM', 'Jones');
 
--- Insert Arbitrary Game.
-INSERT INTO "chathamabate/jdg"."games" (gid, game_start, loc, player_1, player_2, player_3, player_4)
+-- Insert Arbitrary League Match.
+INSERT INTO "chathamabate/jdg"."games" (gid, league_match, game_start, loc)
 VALUES 
-    ((SELECT MAX(gid) + 1 FROM "chathamabate/jdg"."games"), 
-    '3-23-2022 10:00 PM', 'Jones', 1, 4, 7, 3);
+    ((SELECT MAX(gid) + 1 FROM "chathamabate/jdg"."games"), TRUE, '3-23-2022 10:00 PM', 'Jones');
 
+
+
+-- This table describes which players played in which games
+-- at what positions.
+CREATE TABLE "chathamabate/jdg"."rosters" (
+    gid INTEGER,
+    pid INTEGER,
+    pos INTEGER,
+    PRIMARY KEY(gid, pid, pos),
+
+    CONSTRAINT game_exists
+        FOREIGN KEY(gid) REFERENCES "chathamabate/jdg"."games"(gid),
+    CONSTRAINT player_exists
+        FOREIGN KEY(pid) REFERENCES "chathamabate/jdg"."players"(pid),
+    CONSTRAINT pos_is_valid
+        CHECK(0 <= pos AND pos <= 3)
+);
+
+-- Insert First game rosters into rosters table.
+INSERT INTO "chathamabate/jdg"."rosters" (gid, pid, pos)
+VALUES  (0, 1, 0),
+        (0, 4, 1),
+        (0, 7, 2),
+        (0, 3, 3);
+        
+
+
+-- Turns Table
+CREATE TABLE "chathamabate/jdg"."turns" (
+    gid INTEGER,
+    pid INTEGER,
+    round_num INTEGER,
+    bet INTEGER NOT NULL,
+    earned INTEGER NOT NULL,
+    PRIMARY KEY(gid, pid, round_num),
+
+    CONSTRAINT game_exists
+        FOREIGN KEY(gid) REFERENCES "chathamabate/jdg"."games"(gid),
+    CONSTRAINT player_exists
+        FOREIGN KEY(pid) REFERENCES "chathamabate/jdg"."players"(pid),
+    CONSTRAINT valid_turn
+        CHECK(
+            (1 <= round_num AND round_num <= 25) AND
+            (0 <= bet AND bet <= round_num)
+        ) 
+);
+
+
+
+-- Finally, we will need a view containing just complete games!
