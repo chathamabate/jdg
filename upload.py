@@ -267,7 +267,7 @@ for df in new_data_files:
         print(f"  SQL Error, {error}")
         continue
 
-    # Finally, move this file into the old datafile location.
+    # Finally, move this file into the old data file location.
     shutil.move(abs_path, os.path.join(OLD_DATA_PATH, df))
 
             

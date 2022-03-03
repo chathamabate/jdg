@@ -11,8 +11,8 @@ CREATE TABLE "chathamabate/jdg"."players" (
 );
 
 -- Insert Root User (i.e. ME!)
-INSERT INTO "chathamabate/jdg"."players" (pid, firstname, lastname, college, birthday)
-VALUES (0, 'Chatham', 'Abate', 'McMurtry', '04-01-1999');
+-- INSERT INTO "chathamabate/jdg"."players" (pid, firstname, lastname, college, birthday)
+-- VALUES (0, 'Chatham', 'Abate', 'McMurtry', '04-01-1999');
 
 -- Insert Non Root User (i.e. Someone else)
 -- INSERT INTO "chathamabate/jdg"."players" (pid, firstname, lastname, college, birthday)
@@ -87,7 +87,5 @@ DROP TABLE "chathamabate/jdg"."players";
 DELETE FROM "chathamabate/jdg"."turns" WHERE 1=1;
 DELETE FROM "chathamabate/jdg"."rosters" WHERE 1=1;
 DELETE FROM "chathamabate/jdg"."games" WHERE 1=1;
-
-
 
 -- Finally, we will need a view containing just complete games!
