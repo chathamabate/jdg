@@ -4,8 +4,11 @@ CREATE TABLE "chathamabate/jdg"."rosters" (
     gid INTEGER,
     pos INTEGER,
     pid INTEGER,
-    PRIMARY KEY(gid, pos),
 
+    CONSTRAINT rosters_pkey
+        PRIMARY KEY (gid, pos),
+    CONSTRAINT unqiue_players_per_game
+        UNIQUE (gid, pid),
     CONSTRAINT game_exists
         FOREIGN KEY(gid) REFERENCES "chathamabate/jdg"."games"(gid),
     CONSTRAINT pos_is_valid

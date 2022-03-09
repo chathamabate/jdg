@@ -5,7 +5,8 @@ CREATE TABLE "chathamabate/jdg"."players" (
     lastname VARCHAR(255),
     college VARCHAR(255),
     birthday DATE,
-    PRIMARY KEY (pid),
+
+    CONSTRAINT players_pkey PRIMARY KEY (pid),
     CONSTRAINT positive_pid CHECK(pid >= 0)
 );
 

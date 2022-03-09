@@ -4,7 +4,8 @@ CREATE TABLE "chathamabate/jdg"."games" (
     league_match BOOLEAN DEFAULT FALSE,
     game_start TIMESTAMP,
     loc VARCHAR(255),
-    PRIMARY KEY (gid),
+
+    CONSTRAINT games_pkey PRIMARY KEY (gid),
     CONSTRAINT positive_gid CHECK(gid >= 0)
 );
 

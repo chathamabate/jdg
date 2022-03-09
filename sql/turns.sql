@@ -5,8 +5,9 @@ CREATE TABLE "chathamabate/jdg"."turns" (
     round_num INTEGER,
     bet INTEGER NOT NULL,
     earned INTEGER NOT NULL,
-    PRIMARY KEY(gid, pos, round_num),
 
+    CONSTRAINT turns_pkey
+        PRIMARY KEY(gid, pos, round_num),
     CONSTRAINT game_and_turn_exist
         FOREIGN KEY(gid, pos) REFERENCES "chathamabate/jdg"."rosters"(gid, pos),
     CONSTRAINT valid_round
