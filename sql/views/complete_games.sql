@@ -9,14 +9,7 @@ SELECT g.gid FROM "chathamabate/jdg"."games" g
 WHERE (
     SELECT COUNT(*) FROM (
         SELECT MAX(t.gid), t.round_num
-        FROM (
-            SELECT tp.gid, tp.round_num, tp.bet, tp.earned,
-                CASE 
-                    WHEN tp.round_num <= 13 THEN tp.round_num
-                    ELSE 26 - tp.round_num
-                END AS card_amount
-            FROM "chathamabate/jdg"."turns" tp
-        ) t
+        FROM "chathamabate/jdg"."turn_extras" t
         WHERE (
             -- All turns from this game with valid
             -- bet and earned values.

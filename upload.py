@@ -24,8 +24,7 @@ CREDS_PATH = os.path.join(DIR_PATH, "creds.json")
 
 # Fields which must be present in creds.json.
 REQ_CREDS_FIELDS = [
-    "api_key",
-    "players", "games", "rosters", "turns"
+    "api_key", "base_path"
 ]
 
 # I am assuming these players are static.
@@ -188,6 +187,13 @@ if len(missing_creds) > 0:
     print(f"Fields missing in creds.json {missing_creds}")
     exit(1)
 
+API_KEY = creds["api_key"]
+BASE_PATH = creds["base_path"]
+
+GAMES = BASE_PATH + ".\"games\""
+TURNS = BASE_PATH + ".\"turns\""
+ROSTERS = BASE_PATH + ".\"rosters\""
+
 curr = None
 try:
     b = bitdotio.bitdotio(creds["api_key"])
@@ -248,20 +254,20 @@ for df in new_data_files:
                 print(f"  * {err}")
         continue 
     
-    gid, error = construct_new_game(curr, creds["games"], match_dt, 
+    gid, error = construct_new_game(curr, GAMES, match_dt, 
                                     league_match, location)
 
     if error != None:
         print(f"  SQL Error, {error}")
         continue
 
-    error = insert_rosters(curr, creds["rosters"], gid, pids)
+    error = insert_rosters(curr, ROSTERS, gid, pids)
 
     if error != None:
         print(f"  SQL Error, {error}")
         continue
     
-    error = insert_turns(curr, creds["turns"], gid, results)
+    error = insert_turns(curr, TURNS, gid, results)
 
     if error != None:
         print(f"  SQL Error, {error}")

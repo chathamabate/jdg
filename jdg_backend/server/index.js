@@ -7,8 +7,7 @@ const { Pool } = require('pg')
 
 const PORT = process.env.PORT || 3001;
 const CREDS_PATH = path.join(path.dirname(__dirname), "creds.json");
-const REQUIRED_CREDS = ["username", "password", "database", "server", "port",
-                        "players", "games", "rosters", "turns"];
+const REQUIRED_CREDS = ["username", "password", "database", "server", "port", "base_path"];
 
 let creds = {};
 try {
