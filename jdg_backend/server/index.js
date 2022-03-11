@@ -3,7 +3,7 @@ const express = require("express");
 const fs = require('fs');
 const { exit } = require("process");
 const path = require("path");
-const { Client } = require('pg')
+const { Pool } = require('pg')
 
 const PORT = process.env.PORT || 3001;
 const CREDS_PATH = path.join(path.dirname(__dirname), "creds.json");
@@ -40,9 +40,15 @@ const pool = new Pool({
     database: creds["database"],
     password: creds["password"],
     port: creds["port"],
-  })
-  
+});
 
+
+// pool.query(`SELECT * FROM bleh;`)
+//     .then(res => console.log(res.rows))
+//     .catch(e => {
+//         console.error("Error with SQL!");
+//         pool.end().finally(() => exit(1));
+//     });
 
 
 const app = express();
@@ -51,8 +57,10 @@ app.get("/api", (req, res) => {
     res.json({message: "Hello From Server!"});
 });
 
-app.get("/api/total_points", (req, res) => {
-
+// Total points will return the total points of each player.
+// Data will be in the form [{"games_passed" : int, "Josh" : int, ...}, ...].
+app.get("/api/total_points", async (req, res) => {
+    
 
 });
 
