@@ -31,6 +31,12 @@ if (missing_creds) {
     exit(1);
 }
 
+// Constant table and view paths.
+const BASE_PATH = creds["base_path"];
+const TURN_EXTRAS_FULL = BASE_PATH + ".\"turn_extras_full\"";
+const PLAYERS = BASE_PATH + ".\"players\""
+
+
 console.log("Connecting to SQL...");
 
 const pool = new Pool({
@@ -41,26 +47,31 @@ const pool = new Pool({
     port: creds["port"],
 });
 
-
-// pool.query(`SELECT * FROM bleh;`)
-//     .then(res => console.log(res.rows))
-//     .catch(e => {
-//         console.error("Error with SQL!");
-//         pool.end().finally(() => exit(1));
-//     });
-
-
 const app = express();
 
 app.get("/api", (req, res) => {
     res.json({message: "Hello From Server!"});
 });
 
+// Request Field Descriptions :
+//  {
+//      game: 
+//      player:
+//      stat:
+//      cumulative:
+//      avg:     
+//  }
+
 // Total points will return the total points of each player.
 // Data will be in the form [{"games_passed" : int, "Josh" : int, ...}, ...].
-app.get("/api/total_points", async (req, res) => {
-    
-
+app.get("/api/pts_chr", async (req, res) => {
+    try {
+        data = await pool.query(`SELECT * FROM ${PLAYERS};`);
+        res.json({errors: [], data: {rows: data.rows}});
+    } catch (err) {
+        console.log(err);
+        res.json({errors: ["SQL Error"]});
+    }
 });
 
 app.listen(PORT, () => {
