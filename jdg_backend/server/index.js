@@ -16,7 +16,7 @@ try {
 } catch (err) {
     console.error("Could not find credentials file!");
     exit(1);
-}
+} 
 
 let missing_creds = false;
 
@@ -53,14 +53,25 @@ app.get("/api", (req, res) => {
     res.json({message: "Hello From Server!"});
 });
 
-// Request Field Descriptions :
-//  {
-//      game: 
-//      player:
-//      stat:
-//      cumulative:
-//      avg:     
-//  }
+// Single Game, Per Turn Stats:
+// bet - bet amount.
+// earned - earned amount.
+// bp - base points earned.
+// ep - extra points earned.
+// gp - game points after turn is complete.
+// place - place after turn is complete.
+//
+// What about rolling stats???
+// Total bet up until this turn...
+// We need to differ between rolling stats and full game aggregates???
+// 
+// 
+// 
+// Can turn stats graduate into full season stats??
+// Max, Min, Avg, Sum, Final
+// With use of these aggregates!!!
+// Graph Equations!
+
 
 // Total points will return the total points of each player.
 // Data will be in the form [{"games_passed" : int, "Josh" : int, ...}, ...].
