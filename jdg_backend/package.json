@@ -14,6 +14,7 @@
   "dependencies": {
     "concurrently": "^7.0.0",
     "express": "^4.17.3",
-    "pg": "^8.7.3"
+    "pg": "^8.7.3",
+    "tokenizer": "^1.1.2"
   }
 }

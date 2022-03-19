@@ -1,14 +1,12 @@
-# Backend Query Language
+# Judgement Query Language (JQL)
 
 A user will be able to query the backend for graphable game data.
-
-Queries will either be for single game stats or full season stats.
 
 ## Datatypes
 * `num` a number.
 * `bool` a true of false value.
 * `vec<T>` a sequence of values of type `T`.
-* `map<T1, T2, ... TN, R>` a function which takes `N > 0` inputs and returns `R`.
+* `map<T1, T2, ... TN, R>` a function which takes `N` inputs and returns `R`.
 * `str` a string of characters.
 
 ## Graphing
@@ -33,30 +31,64 @@ Index structure : [game id][seat][round].
 vec<vec<vec<num>>> earns
 A table holding the number of tricks earned by each of player of each game.
 Index structure : [game id][seat][round].
+```
 
+## Primitive Functions
+Here is a list of primitive functions with special behavoirs.
+```
 map<vec<?>, num> len
 Returns the length of a vector.
+
+map<vec<T>, map<R, T, R>, R, R> foldl
+Left recursive fold operation. 
 ```
 
 ## Grammar 
 ```
-<MAP> ::=
-<MAT> ::= match <EXP> (case -> <EXP>,)* default <EXP> 
+// Grammar Rules
+
+<PRG> ::= (<OUT> | <GDF> | <VDF>)*
+<OUT> ::= output <EXP> on <GID> as <EXP>
+<GDF> ::= (individual|season) output <GID>
+<VDF> ::= define <TYP> <VID> as <EXP>
+<EXP> ::= <MAP> | <MAT> | <ORR>
+<MAP> ::= \( (<TYP> <ID> (, <TYP> <ID>)*)? \) -> (<VDF>)* <EXP>
+<MAT> ::= match <EXP> (case <EXP> -> <EXP>,)* default <EXP> 
 <ORR> ::= <AND> (or <ORR>)* // Most zoomed out level of a singular value.
 <AND> ::= <NOT> (and <AND>)*
-<NOT> ::= (not)? <EQU>
-<EQU> ::= <SUM> (= <SUM>)?
+<NOT> ::= (not)? <CMP>
+<CMP> ::= <SUM> (=|<=|>=|<|> <SUM>)?
 <SUM> ::= <PRD> ((+|-) <SUM>)*
 <PRD> ::= <APP> ((\*|/) <PRD>)*
 <APP> ::= <ADR> ( <IND> | <AGL> )*
-        | <BUL> | <NUM>
-<ADR> ::= <ID>              // Something which is indexable or callable.
+        | <BUL> | <NUM> | <STR>
+<ADR> ::= <VID>              // Something which is indexable or callable.
+        | <PRM>
         | \(  <EXP> \)
-<AGL> ::= \( <EXP> (, <EXP>)*  \)
+<AGL> ::= \( (<EXP> (, <EXP>)*)?  \)
 <IND> ::= \[ <NUM> \]
-<ID>  ::= [a-zA-Z_][a-zA-Z0-9_]* 
+<GID> ::= @ <VID>
+<VID> ::= [a-zA-Z_][a-zA-Z0-9_]* 
 <BUL> ::= true | false
 <NUM> ::= ([1-9][0-9]*|0)(\.[0-9]+)?
+<STR> ::= "[^"\n]*"
+<TYP> ::= vec<<TYP>> 
+        | map<(<TYP> (, (<TYP>))*)?>
+        | num | bool | str
+<PRM> ::= len | foldl
+
+// List of tokens derrived from above grammar.
+
+// Reserved Words
+output on as individual season define match case default or and not
+vec map num bool str len foldl
+
+// Symbols
+( ) , -> = <= >= < > + - * / [ ] 
+
+// Variable Tokens
+<STR> <GID> <VID>
+
 ```
 
 <!-- ## Single Value Variables
