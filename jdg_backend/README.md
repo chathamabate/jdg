@@ -47,47 +47,47 @@ Left recursive fold operation.
 ```
 // Grammar Rules
 
-<PRG> ::= (<OUT> | <GDF> | <VDF>)*
-<OUT> ::= output <EXP> on <GID> as <EXP>
-<GDF> ::= (individual|season) output <GID>
-<VDF> ::= define <TYP> <VID> as <EXP>
+<PRG> ::= (<VDF> | <STM>)* <EOF>
+<STM> ::= do <EXP>
+<VDF> ::= define <GTP> <VID> as <EXP>
 <EXP> ::= <MAP> | <MAT> | <ORR>
-<MAP> ::= \( (<TYP> <ID> (, <TYP> <ID>)*)? \) -> (<VDF>)* <EXP>
-<MAT> ::= match <EXP> (case <EXP> -> <EXP>,)* default <EXP> 
+<MAP> ::= \( (<GTP> <VID> (, <GTP> <VID>)*)? \) -> (<VDF>)* <EXP>
+<MAT> ::= match (<EXP>)? (case <EXP> -> <EXP>,)* default <EXP> 
 <ORR> ::= <AND> (or <ORR>)* // Most zoomed out level of a singular value.
 <AND> ::= <NOT> (and <AND>)*
 <NOT> ::= (not)? <CMP>
 <CMP> ::= <SUM> (=|<=|>=|<|> <SUM>)?
 <SUM> ::= <PRD> ((+|-) <SUM>)*
-<PRD> ::= <APP> ((\*|/) <PRD>)*
+<PRD> ::= <APP> ((\*|/|%) <PRD>)*
 <APP> ::= <ADR> ( <IND> | <AGL> )*
         | <BUL> | <NUM> | <STR>
 <ADR> ::= <VID>              // Something which is indexable or callable.
-        | <PRM>
+        | <LST>
         | \(  <EXP> \)
 <AGL> ::= \( (<EXP> (, <EXP>)*)?  \)
 <IND> ::= \[ <NUM> \]
-<GID> ::= @ <VID>
 <VID> ::= [a-zA-Z_][a-zA-Z0-9_]* 
-<BUL> ::= true | false
-<NUM> ::= ([1-9][0-9]*|0)(\.[0-9]+)?
-<STR> ::= "[^"\n]*"
-<TYP> ::= vec<<TYP>> 
-        | map<(<TYP> (, (<TYP>))*)?>
-        | num | bool | str
-<PRM> ::= len | foldl
+<VEC> ::= \[ (<EXP> (, <EXP>)*)? \]
+<BLV> ::= true | false
+<NMV> ::= ([1-9][0-9]*|0)(\.[0-9]+)?
+<STV> ::= "[^"\n]*"
+<GTP> ::= vec<<GTP>>
+        | map<<GTP> (, <GTP>)*>
+        | <PTP>
+        | <VID>
+<PTP> ::= num | bool | str
 
 // List of tokens derrived from above grammar.
 
 // Reserved Words
-output on as individual season define match case default or and not
-vec map num bool str len foldl
+do as define match case default or and not
+vec map num bool str true false
 
 // Symbols
-( ) , -> = <= >= < > + - * / [ ] 
+( ) , -> = <= >= < > + - * % / [ ] 
 
 // Variable Tokens
-<STR> <GID> <VID>
+<STV> <VID> <NMV>
 
 ```
 

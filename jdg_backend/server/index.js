@@ -5,6 +5,8 @@ const { exit } = require("process");
 const path = require("path");
 const { Pool } = require('pg')
 
+const { TokenType } = require("./jql_scanner")
+
 const PORT = process.env.PORT || 3001;
 const CREDS_PATH = path.join(path.dirname(__dirname), "creds.json");
 const REQUIRED_CREDS = ["username", "password", "database", "server", "port", "base_path"];
