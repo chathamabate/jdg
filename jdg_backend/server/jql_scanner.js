@@ -35,7 +35,7 @@ class TokenType {
 
     static STV = new TokenType("<STV>");
     static NMV = new TokenType("<NMV>");
-    static BLV = new TokenType("BLV");
+    static BLV = new TokenType("<BLV>");
     static VID = new TokenType("<VID>");
 
 
@@ -45,39 +45,50 @@ class TokenType {
 }
 
 class Token {
-    static T_DO = new Token("do", DO);
-    static T_AS = new Token("as", AS);
-    static T_DEF = new Token("define", DEF);
-    static T_MAT = new Token("match", MAT);
-    static T_CAS = new Token("case", CAS);
-    static T_DFT = new Token("default", DFT);
-    static T_OR = new Token("or", OR);
-    static T_AND = new Token("and", AND);
-    static T_NOT = new Token("not", NOT);
-    static T_VEC = new Token("vec", VEC);
-    static T_MAP = new Token("map", MAP);
-    static T_NUM = new Token("num", NUM);
-    static T_BUL = new Token("bool", BUL);
-    static T_STR = new Token("str", STR);
+    static T_DO = new Token("do", TokenType.DO);
+    static T_AS = new Token("as", TokenType.AS);
+    static T_DEF = new Token("define", TokenType.DEF);
+    static T_MAT = new Token("match", TokenType.MAT);
+    static T_CAS = new Token("case", TokenType.CAS);
+    static T_DFT = new Token("default", TokenType.DFT);
+    static T_OR = new Token("or", TokenType.OR);
+    static T_AND = new Token("and", TokenType.AND);
+    static T_NOT = new Token("not", TokenType.NOT);
+    static T_VEC = new Token("vec", TokenType.VEC);
+    static T_MAP = new Token("map", TokenType.MAP);
+    static T_NUM = new Token("num", TokenType.NUM);
+    static T_BUL = new Token("bool", TokenType.BUL);
+    static T_STR = new Token("str", TokenType.STR);
 
-    static T_LPN = new Token("(", LPN);
-    static T_RPN = new Token(")", RPN);
-    static T_COM = new Token(",", COM);
-    static T_ARR = new Token("->", ARR);
-    static T_EQU = new Token("=", EQU);
-    static T_LTE = new Token("<=", LTE);
-    static T_GTE = new Token(">=", GTE);
-    static T_LT = new Token("<", LT);
-    static T_GT = new Token(">", GT);
-    static T_PLS = new Token("+", PLS);
-    static T_MIN = new Token("-", MIN);
-    static T_TIM = new Token("*", TIM);
-    static T_DIV = new Token("/", DIV);
-    static T_MOD = new Token("%", MOD);
-    static T_LBR = new Token("[", LBR);
-    static T_RBR = new Token("]", RBR);
+    static T_TRU = new Token("true", TokenType.BLV);
+    static T_FAL = new Token("false", TokenType.BLV);
 
-    static T_EOF = new Token("\\0", EOF);
+    static RESERVED_WORDS = [
+        Token.T_DO, Token.T_AS, Token.T_DEF, 
+        Token.T_MAT, Token.T_CAS, Token.T_DFT, 
+        Token.T_OR, Token.T_AND, Token.T_NOT, Token.T_VEC, 
+        Token.T_MAP, Token.T_NUM, Token.T_BUL, Token.T_STR,
+        Token.T_TRU, Token.T_FAL
+    ];
+
+    static T_LPN = new Token("(", TokenType.LPN);
+    static T_RPN = new Token(")", TokenType.RPN);
+    static T_COM = new Token(",", TokenType.COM);
+    static T_ARR = new Token("->", TokenType.ARR);
+    static T_EQU = new Token("=", TokenType.EQU);
+    static T_LTE = new Token("<=", TokenType.LTE);
+    static T_GTE = new Token(">=", TokenType.GTE);
+    static T_LT = new Token("<", TokenType.LT);
+    static T_GT = new Token(">", TokenType.GT);
+    static T_PLS = new Token("+", TokenType.PLS);
+    static T_MIN = new Token("-", TokenType.MIN);
+    static T_TIM = new Token("*", TokenType.TIM);
+    static T_DIV = new Token("/", TokenType.DIV);
+    static T_MOD = new Token("%", TokenType.MOD);
+    static T_LBR = new Token("[", TokenType.LBR);
+    static T_RBR = new Token("]", TokenType.RBR);
+
+    static T_EOF = new Token("\\0", TokenType.EOF);
 
     constructor(lex, tt) {
         this.lexeme = lex;
@@ -85,18 +96,31 @@ class Token {
     }
 }
 
+const RESERVED_WORDS_DICT = {}
+
+for (let rwt of Token.RESERVED_WORDS) {
+    RESERVED_WORDS_DICT[rwt.lexeme] = rwt;
+}
+
 class JQLScanner {
     constructor(data) {
-        this.data = "CHANGE MEEEEEEEEEEEEEEEEEEE";
+        this.data = data;
         this.ind = 0;
         this.line = 1;
         this.halted = false;
+
+        this.curr = [null, "No tokens loaded yet."]
     }
 
     error(msg) {
         this.halted = true;
         return [null, this.line + " : " + msg];
     } 
+
+    find(token) {
+        this.curr = [token, null];
+        return this.curr;
+    }
 
     // Next token returns a list with two elements...
     //               [token, error]
@@ -106,7 +130,7 @@ class JQLScanner {
     // Every call to nextToken() after this point will return an error.
     //
     // The scanner automatically halts after returning the EOF character.
-    nextToken() {
+    next() {
         if (this.halted) {
             return this.error("Scanner has been halted.");
         }
@@ -121,61 +145,63 @@ class JQLScanner {
 
         if (this.ind == this.data.length) {
             this.halted = true;
-            return [T_EOF, null]
+            return this.find(Token.T_EOF);
         }
+
+        let n = null;
 
         switch (c) {
             case "(":
-                return [T_LPN, null];
+                return this.find(Token.T_LPN);
             case ")":
-                return [T_RPN, null];
+                return this.find(Token.T_RPN);
             case ",":
-                return [T_COM, null];
+                return this.find(Token.T_COM);
             case "=":
-                return [T_EQU, null];
+                return this.find(Token.T_EQU);
             case "+":
-                return [T_PLS, null];
+                return this.find(Token.T_PLS);
             case "*":
-                return [T_TIM, null];
+                return this.find(Token.T_TIM);
             case "%":
-                return [T_MOD, null];
+                return this.find(Token.T_MOD);
             case "/":
-                return [T_DIV, null];
+                return this.find(Token.T_DIV);
             case "[":
-                return [T_LBR, null];
+                return this.find(Token.T_LBR);
             case "]":
-                return [T_RBR, null];
+                return this.find(Token.T_RBR);
             case "-":
                 if (this.ind == this.data.length) {
-                    return [T_MIN, null];
+                    return this.find(Token.T_MIN);
                 }
 
-                let n = this.data[this.ind];
+                n = this.data[this.ind];
 
                 if (n == ">") {
                     this.ind++;
-                    return [T_ARR, null];
+                    return this.find(Token.T_ARR);
                 }
 
-                return [T_MIN, null];
+                return this.find(Token.T_MIN);
             case ">":
             case "<":
                 if (this.ind == this.data.length) {
-                    return [T_MIN, null];
+                    return this.find(Token.T_MIN);
                 }
 
-                let n = this.data[this.ind];
+                n = this.data[this.ind];
 
                 if (n == "=") {
                     this.ind++;
-                    return [c == "<" ? T_LTE : T_GTE, null];
+                    return this.find(c == "<" ? Token.T_LTE : Token.T_GTE);
                 }
 
-                return [c == "<" ? T_LT : T_GT, null];
+                return this.find(c == "<" ? Token.T_LT : Token.T_GT);
             case "\"":
                 let lex = c;
                 while (this.ind < this.data.length) {
-                    let n = this.data[this.ind++];
+                    n = this.data[this.ind++];
                     if (n == "\n") {
                         return this.error("Strings cannot be multi line.");
                     }
@@ -183,18 +209,92 @@ class JQLScanner {
                     lex += n;
 
                     if (n == "\"") {
-                        return [new Token(lex, STV), null];
+                        return this.find(new Token(lex, TokenType.STV));
                     }
                 }
 
                 return this.error("String missing closing quote.");
             default:
-                // Number or ID or reserved word case!
+                return this.nextNumResOrID(c);
         }
+    }
+
+    readDigits() {
+        let digits = "";
+        let c = "";
+
+        while (this.ind < this.data.length && 
+            /[0-9]/.test(c = this.data[this.ind])) {
+            digits += c;
+            this.ind++;
+        }
+
+        return digits;
+    }
+
+    // Scan for a number, reserved word, or ID.
+    // c is the last character to be read.
+    nextNumResOrID(c) {
+        let lex = c;
+
+        // Number case.
+        if (/[0-9]/.test(c)) {
+            if (c != "0") {
+                lex += this.readDigits();
+            }
+
+            // this.ind will always equal the index of the next unread
+            // character.
+
+            if (this.ind == this.data.length) {
+                return this.find(new Token(lex, TokenType.NMV));
+            }
+
+            c = this.data[this.ind];
+
+            // With no decimal point, stop here.
+            // If the decimal point is the last character of the string,
+            // it is impossible the decimal point will be added to this token.
+
+            if (c != "." || this.ind == this.data.length - 1) {
+                return this.find(new Token(lex, TokenType.NMV));
+            }
+            
+            // With a decimal point, we should only add it to the lexeme
+            // if digits follow.
+
+            let lookahead = this.data[this.ind + 1];
+
+            if (/[0-9]/.test(lookahead)) {
+                this.ind += 2;
+                lex += "." + lookahead;
+                lex += this.readDigits();
+            }
+
+            // If no digits followed the decimal, simply return the original lex.
+
+            return this.find(new Token(lex, TokenType.NMV));
+        }
+
+        // ID/reserved word case.
+        if (/[a-zA-Z_]/.test(c)) {
+            while (this.ind < this.data.length && 
+                /[a-zA-Z0-9_]/.test(c = this.data[this.ind])) {
+                lex += c;
+                this.ind++;
+            }
+
+            if (lex in RESERVED_WORDS_DICT) {
+                return this.find(RESERVED_WORDS_DICT[lex]);
+            }
+
+            return this.find(new Token(lex, TokenType.VID));
+        }
+
+        return this.error("Invalid token starting character " + c + ".");
     }
 }
 
-console.log(a.nextToken());
-
-
 module.exports.TokenType = TokenType;
+module.exports.Token = Token;
+module.exports.JQLScanner = JQLScanner;

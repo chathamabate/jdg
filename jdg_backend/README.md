@@ -58,9 +58,10 @@ Left recursive fold operation.
 <NOT> ::= (not)? <CMP>
 <CMP> ::= <SUM> (=|<=|>=|<|> <SUM>)?
 <SUM> ::= <PRD> ((+|-) <SUM>)*
-<PRD> ::= <APP> ((\*|/|%) <PRD>)*
+<PRD> ::= <NEG> ((\*|/|%) <PRD>)*
+<NEG> ::= (-)? <APP>
 <APP> ::= <ADR> ( <IND> | <AGL> )*
-        | <BUL> | <NUM> | <STR>
+        | <BLV> | <NMV> | <STV>
 <ADR> ::= <VID>              // Something which is indexable or callable.
         | <LST>
         | \(  <EXP> \)
