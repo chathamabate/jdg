@@ -142,8 +142,10 @@ class JQLScanner {
             /\s/.test(c = this.data[this.ind++])) {
             if (c == "\n") this.line++;
         }
-
-        if (this.ind == this.data.length) {
+        
+        // If c is whitespace or null, we know we've reached
+        // the end of the data string.
+        if (c == null || /\s/.test(c)) {
             this.halted = true;
             return this.find(Token.T_EOF);
         }
@@ -186,15 +188,13 @@ class JQLScanner {
                 return this.find(Token.T_MIN);
             case ">":
             case "<":
-                if (this.ind == this.data.length) {
-                    return this.find(Token.T_MIN);
-                }
+                if (this.ind < this.data.length) {
+                    n = this.data[this.ind];
 
-                n = this.data[this.ind];
-
-                if (n == "=") {
-                    this.ind++;
-                    return this.find(c == "<" ? Token.T_LTE : Token.T_GTE);
+                    if (n == "=") {
+                        this.ind++;
+                        return this.find(c == "<" ? Token.T_LTE : Token.T_GTE);
+                    }
                 }
 
                 return this.find(c == "<" ? Token.T_LT : Token.T_GT);
