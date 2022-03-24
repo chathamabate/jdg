@@ -53,20 +53,20 @@ Left recursive fold operation.
 <EXP> ::= <MAP> | <MAT> | <ORR>
 <MAP> ::= \( (<GTP> <VID> (, <GTP> <VID>)*)? \) -> (<VDF>)* <EXP>
 <MAT> ::= match (<EXP>)? (case <EXP> -> <EXP>,)* default <EXP> 
-<ORR> ::= <AND> (or <ORR>)* // Most zoomed out level of a singular value.
-<AND> ::= <NOT> (and <AND>)*
+<ORR> ::= <AND> (or <AND>)* // Most zoomed out level of a singular value.
+<AND> ::= <NOT> (and <NOT>)*
 <NOT> ::= (not)? <CMP>
 <CMP> ::= <SUM> (=|<=|>=|<|> <SUM>)?
-<SUM> ::= <PRD> ((+|-) <SUM>)*
-<PRD> ::= <NEG> ((\*|/|%) <PRD>)*
+<SUM> ::= <PRD> ((+|-) <PRD>)*
+<PRD> ::= <NEG> ((\*|/|%) <NEG>)*
 <NEG> ::= (-)? <APP>
 <APP> ::= <ADR> ( <IND> | <AGL> )*
         | <BLV> | <NMV> | <STV>
 <ADR> ::= <VID>              // Something which is indexable or callable.
-        | <LST>
+        | <VEC>
         | \(  <EXP> \)
 <AGL> ::= \( (<EXP> (, <EXP>)*)?  \)
-<IND> ::= \[ <NUM> \]
+<IND> ::= \[ <EXP> \]
 <VID> ::= [a-zA-Z_][a-zA-Z0-9_]* 
 <VEC> ::= \[ (<EXP> (, <EXP>)*)? \]
 <BLV> ::= true | false

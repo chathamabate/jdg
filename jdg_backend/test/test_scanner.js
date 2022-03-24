@@ -62,8 +62,13 @@ const et7 = [
     [TokenType.VID, TokenType.NMV, TokenType.VID, TokenType.EOF]
 ];
 
+const et8 = [
+    "",
+    [TokenType.EOF]
+];
+
 const ets = [
-    et1, et2, et3, et4, et5, et6, et7
+    et1, et2, et3, et4, et5, et6, et7, et8
 ];
 
 describe("Expected Tests", () => {

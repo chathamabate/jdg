@@ -1,3 +1,5 @@
+const { TryFailure, TrySuccess } = require("./utils");
+
 class TokenType {
     static DO = new TokenType("<DO>");
     static AS = new TokenType("<AS>");
@@ -103,13 +105,33 @@ for (let rwt of Token.RESERVED_WORDS) {
 }
 
 class JQLScanner {
-    constructor(data) {
-        this.data = data;
-        this.ind = 0;
-        this.line = 1;
-        this.halted = false;
+    static #STARTING_TOKEN = new TryFailure(new Error("No tokens loaded yet."));
 
-        this.curr = [null, "No tokens loaded yet."]
+    #data;
+    #ind;
+    #line;
+    #halted;
+    #curr;
+
+    constructor(data) {
+        this.#data = data;
+        this.#ind = 0;
+        this.#line = 1;
+        this.#halted = false;
+
+        this.#curr = JQLScanner.#STARTING_TOKEN;
+    }
+
+    get line() {
+        return this.#line;
+    }
+
+    get halted() {
+        return this.#halted;
+    }
+
+    get curr() {
+        return this.#curr;
     }
 
     error(msg) {
