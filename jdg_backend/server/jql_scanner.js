@@ -105,7 +105,7 @@ for (let rwt of Token.RESERVED_WORDS) {
 }
 
 class JQLScanner {
-    static #STARTING_TOKEN = new TryFailure(new Error("No tokens loaded yet."));
+    static #STARTING_TOKEN = new TryFailure("No tokens loaded yet.");
 
     #data;
     #ind;
@@ -134,121 +134,115 @@ class JQLScanner {
         return this.#curr;
     }
 
-    error(msg) {
-        this.halted = true;
-        return [null, this.line + " : " + msg];
+    #error(msg) {
+        this.#halted = true;
+        return new TryFailure(this.line + " : " + msg);
     } 
 
-    find(token) {
-        this.curr = [token, null];
-        return this.curr;
+    #find(token) {
+        this.#curr = new TrySuccess(token);
+        return this.#curr;
     }
 
-    // Next token returns a list with two elements...
-    //               [token, error]
-    // If token is null, the error string will be populated.
-    // If a token is found, the error string will be null.
-    // Once one error has been found, this scanner will be halted.
-    // Every call to nextToken() after this point will return an error.
-    //
     // The scanner automatically halts after returning the EOF character.
+    // next returns a Try which either contains the read token or an error.
     next() {
-        if (this.halted) {
-            return this.error("Scanner has been halted.");
+        if (this.#halted) {
+            return this.#error("Scanner has been halted.");
         }
 
         // Get first non whitespace character.
         // Count line breaks as well.
         let c = null;
-        while (this.ind < this.data.length && 
-            /\s/.test(c = this.data[this.ind++])) {
-            if (c == "\n") this.line++;
+        while (this.#ind < this.#data.length && 
+            /\s/.test(c = this.#data[this.#ind++])) {
+            if (c == "\n") this.#line++;
         }
         
         // If c is whitespace or null, we know we've reached
         // the end of the data string.
         if (c == null || /\s/.test(c)) {
-            this.halted = true;
-            return this.find(Token.T_EOF);
+            this.#halted = true;
+            return this.#find(Token.T_EOF);
         }
 
         let n = null;
 
         switch (c) {
             case "(":
-                return this.find(Token.T_LPN);
+                return this.#find(Token.T_LPN);
             case ")":
-                return this.find(Token.T_RPN);
+                return this.#find(Token.T_RPN);
             case ",":
-                return this.find(Token.T_COM);
+                return this.#find(Token.T_COM);
             case "=":
-                return this.find(Token.T_EQU);
+                return this.#find(Token.T_EQU);
             case "+":
-                return this.find(Token.T_PLS);
+                return this.#find(Token.T_PLS);
             case "*":
-                return this.find(Token.T_TIM);
+                return this.#find(Token.T_TIM);
             case "%":
-                return this.find(Token.T_MOD);
+                return this.#find(Token.T_MOD);
             case "/":
-                return this.find(Token.T_DIV);
+                return this.#find(Token.T_DIV);
             case "[":
-                return this.find(Token.T_LBR);
+                return this.#find(Token.T_LBR);
             case "]":
-                return this.find(Token.T_RBR);
+                return this.#find(Token.T_RBR);
             case "-":
-                if (this.ind == this.data.length) {
-                    return this.find(Token.T_MIN);
+                if (this.#ind == this.#data.length) {
+                    return this.#find(Token.T_MIN);
                 }
 
-                n = this.data[this.ind];
+                n = this.#data[this.#ind];
 
                 if (n == ">") {
-                    this.ind++;
-                    return this.find(Token.T_ARR);
+                    this.#ind++;
+                    return this.#find(Token.T_ARR);
                 }
 
-                return this.find(Token.T_MIN);
+                return this.#find(Token.T_MIN);
             case ">":
             case "<":
-                if (this.ind < this.data.length) {
-                    n = this.data[this.ind];
+                if (this.#ind < this.#data.length) {
+                    n = this.#data[this.#ind];
 
                     if (n == "=") {
-                        this.ind++;
-                        return this.find(c == "<" ? Token.T_LTE : Token.T_GTE);
+                        this.#ind++;
+                        return this.#find(c == "<" ? Token.T_LTE : Token.T_GTE);
                     }
                 }
 
-                return this.find(c == "<" ? Token.T_LT : Token.T_GT);
+                return this.#find(c == "<" ? Token.T_LT : Token.T_GT);
             case "\"":
                 let lex = c;
-                while (this.ind < this.data.length) {
-                    n = this.data[this.ind++];
+                while (this.#ind < this.#data.length) {
+                    n = this.#data[this.#ind++];
                     if (n == "\n") {
-                        return this.error("Strings cannot be multi line.");
+                        return this.#error("Strings cannot be multi line.");
                     }
 
                     lex += n;
 
                     if (n == "\"") {
-                        return this.find(new Token(lex, TokenType.STV));
+                        return this.#find(new Token(lex, TokenType.STV));
                     }
                 }
 
-                return this.error("String missing closing quote.");
+                return this.#error("String missing closing quote.");
             default:
-                return this.nextNumResOrID(c);
+                return this.#nextNumResOrID(c);
         }
     }
 
-    readDigits() {
+    #readDigits() {
         let digits = "";
         let c = "";
 
-        while (this.ind < this.data.length && 
-            /[0-9]/.test(c = this.data[this.ind])) {
+        while (this.#ind < this.#data.length && 
+            /[0-9]/.test(c = this.#data[this.#ind])) {
             digits += c;
-            this.ind++;
+            this.#ind++;
         }
 
         return digits;
@@ -256,64 +250,64 @@ class JQLScanner {
 
     // Scan for a number, reserved word, or ID.
     // c is the last character to be read.
-    nextNumResOrID(c) {
+    #nextNumResOrID(c) {
         let lex = c;
 
         // Number case.
         if (/[0-9]/.test(c)) {
             if (c != "0") {
-                lex += this.readDigits();
+                lex += this.#readDigits();
             }
 
-            // this.ind will always equal the index of the next unread
+            // this.#ind will always equal the index of the next unread
             // character.
 
-            if (this.ind == this.data.length) {
-                return this.find(new Token(lex, TokenType.NMV));
+            if (this.#ind == this.#data.length) {
+                return this.#find(new Token(lex, TokenType.NMV));
             }
 
-            c = this.data[this.ind];
+            c = this.#data[this.#ind];
 
             // With no decimal point, stop here.
             // If the decimal point is the last character of the string,
             // it is impossible the decimal point will be added to this token.
 
-            if (c != "." || this.ind == this.data.length - 1) {
-                return this.find(new Token(lex, TokenType.NMV));
+            if (c != "." || this.#ind == this.#data.length - 1) {
+                return this.#find(new Token(lex, TokenType.NMV));
             }
             
             // With a decimal point, we should only add it to the lexeme
             // if digits follow.
 
-            let lookahead = this.data[this.ind + 1];
+            let lookahead = this.#data[this.#ind + 1];
 
             if (/[0-9]/.test(lookahead)) {
-                this.ind += 2;
+                this.#ind += 2;
                 lex += "." + lookahead;
-                lex += this.readDigits();
+                lex += this.#readDigits();
             }
 
             // If no digits followed the decimal, simply return the original lex.
 
-            return this.find(new Token(lex, TokenType.NMV));
+            return this.#find(new Token(lex, TokenType.NMV));
         }
 
         // ID/reserved word case.
         if (/[a-zA-Z_]/.test(c)) {
-            while (this.ind < this.data.length && 
-                /[a-zA-Z0-9_]/.test(c = this.data[this.ind])) {
+            while (this.#ind < this.#data.length && 
+                /[a-zA-Z0-9_]/.test(c = this.#data[this.#ind])) {
                 lex += c;
-                this.ind++;
+                this.#ind++;
             }
 
             if (lex in RESERVED_WORDS_DICT) {
-                return this.find(RESERVED_WORDS_DICT[lex]);
+                return this.#find(RESERVED_WORDS_DICT[lex]);
             }
 
-            return this.find(new Token(lex, TokenType.VID));
+            return this.#find(new Token(lex, TokenType.VID));
         }
 
-        return this.error("Invalid token starting character " + c + ".");
+        return this.#error("Invalid token starting character " + c + ".");
     }
 }
 

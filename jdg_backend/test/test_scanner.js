@@ -9,15 +9,7 @@ function expectTokenTypes(t) {
         let i = 0;
 
         for (; i < token_types.length && !sc.halted; i++) {
-            let [t, err] = sc.next();
-
-            // console.log(t.token_type.name);
-    
-            if (err != null) {
-                throw new Error(err);
-            }
-
-            assert.equal(t.token_type, token_types[i]);
+            assert.equal(sc.next().val.token_type, token_types[i]);
         }
     };
 }
@@ -84,12 +76,12 @@ function expectFailure(data) {
         // We expect this will never return the EOF token.
 
         while (true) {
-            let [t, err] = sc.next();
-            if (err != null) {
+            let t = sc.next();
+            if (!t.successful) {
                 return;
             }
 
-            if (t.token_type == TokenType.EOF) {
+            if (t.val.token_type == TokenType.EOF) {
                 throw new Error("Data successfully parsed.")
             }
         }

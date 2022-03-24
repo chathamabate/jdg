@@ -1,4 +1,5 @@
 const {Token, TokenType, JQLScanner} = require("./jql_scanner");
+const {Cons, Empty, TrySuccess, TryFailure} = require("./utils");
 
 class Program {
     constructor(stmts) {
@@ -331,36 +332,36 @@ class JQLParser {
     // The parser will halt after this call regardless of whether
     // an error was found or not.
     parse() {
-
+        this.#sc.next(); // Load first token.
     }
 
     #error(msg) {
-        return [null, this.#sc.line + " : " + msg];
+        return new TryFailure(this.#sc.line + " : " + msg);
     }
 
     #program() {
-        let stmts = [];
+        let stmts = new TrySuccess(Empty.ONLY);
 
-        while (true) {
-            let [n, err] = this.#sc.next();
-
-            if (err != null) {
-                return [null, err];
-            } 
-
-            if (n.token_type == TokenType.EOF) {
-                break;
-            }
-
-            // CHANGE ALL OF THIS!
-            // switch (n.token_type) {
-            //     case TokenType.DO:
-            //     case TokenType.DEF:
-            //         let [vdf, err] = 
-            //     default:
-            //         return this.#error("Could not parse program line.")
-            // }
+        while (!this.#sc.halted && stmts.successful) {
+            stmts = stmts.omap(lines => this.#sc.next().omap(token => {
+                switch (token.token_type) {
+                    case TokenType.EOF:
+                        return stmts;
+                    case TokenType.DO:
+                        return this.#varDefine().map(vdf => new Cons(vdf, lines));
+                    case TokenType.DEF:
+                        return this.#expression().map(e => new Cons(e, lines));
+                    default:
+                        return this.#error("Invalid start to program line.");
+                }
+            }))
         }
+
+        return stmts.map(lines => new Program(lines));
+    }
+
+    #expression() {
+
     }
 
     #varDefine() {

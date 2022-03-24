@@ -21,7 +21,7 @@ describe("Try Tests", () => {
     });
 
     it("TT 3", () => {
-        let tf = new TryFailure(new Error("MEH"));
+        let tf = new TryFailure("MEH");
         let tf_res = tf.map(i => i + 1);
 
         assert.equal(tf, tf_res);

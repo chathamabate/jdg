@@ -7,16 +7,12 @@ class TrySuccess {
         this.#val = val;
     }
 
+    omap(f) {
+        return f(this.#val);
+    }
+
     map(f) {
-        let retVal = null;
-
-        try {
-            retVal = f(this.#val);    
-        } catch (err) {
-            return new TryFailure(err);
-        }
-
-        return new TrySuccess(retVal);
+        return new TrySuccess(f(this.#val));
     }
 
     get successful() {
@@ -33,10 +29,14 @@ class TrySuccess {
 }
 
 class TryFailure {
-    #error
+    #msg
 
-    constructor(error) {
-        this.#error = error;
+    constructor(msg) {
+        this.#msg = msg;
+    }
+
+    omap(f) {
+        return this;
     }
 
     map(f) {
@@ -51,8 +51,46 @@ class TryFailure {
         throw new Error("This try was not successful.");
     }
 
-    get error() {
-        return this.#error;
+    get msg() {
+        return this.#msg;
+    }
+}
+
+class Cons {
+    #head;
+    #tail;
+
+    constructor(head, tail) {
+        this.#head = head;
+        this.#tail = tail;
+    }
+
+    get isEmpty() {
+        return false;
+    }
+
+    get head() {
+        return this.#head;
+    }
+    
+    get tail() {
+        return this.#tail;
+    }
+}   
+
+class Empty {
+    static ONLY = new Empty();
+
+    get isEmpty() {
+        return true;
+    }
+
+    get head() {
+        throw new Error("Empty list has no tail."); 
+    }
+
+    get tail() {
+        throw new Error("Empty list has no head.")
     }
 }
 
