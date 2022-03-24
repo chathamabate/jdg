@@ -94,5 +94,15 @@ class Empty {
     }
 }
 
+class Iter {
+    #stream; // Must have a .next() function which returns an option.
+
+    constructor(stream) {
+        this.#stream = stream;
+    }
+
+    
+}
+
 module.exports.TrySuccess = TrySuccess;
 module.exports.TryFailure = TryFailure;
