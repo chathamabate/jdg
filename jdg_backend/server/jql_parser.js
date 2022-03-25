@@ -1,5 +1,5 @@
 const {Token, TokenType, JQLScanner} = require("./jql_scanner");
-const {Cons, Empty, TrySuccess, TryFailure} = require("./utils");
+const {Cons, Empty, TrySuccess, TryFailure, Iter} = require("./utils");
 
 class Program {
     constructor(stmts) {
@@ -340,7 +340,30 @@ class JQLParser {
     }
 
     #program() {
-        let stmts = new TrySuccess(Empty.ONLY);
+        return Iter.foldUntil(Empty.ONLY, () => 
+            this.#sc.next().omap(token => {
+                switch (token.token_type) {
+                    case TokenType.EOF:
+
+                    case TokenType.DEF:
+                    case TokenType.DO:
+                    default:
+                }
+            }), 
+        (lines, res) => new Cons(res, lines),
+        () => !this.#sc.halted);
+
+        // Only run while the lookahead is not EOF, there have been no
+        // scanner errors, and the statments try remains successful.
+        // These checks are redundant for the optional form... 
+        // Maybe a different construction could be better.
+        while (this.#sc.curr.successful && 
+            this.#sc.curr.val.token_type != TokenType.EOF &&
+            stmts.successful) {
+            
+
+            stmts = stmts.omap(lines => this.#sc.curr)
+        }
 
         while (!this.#sc.halted && stmts.successful) {
             stmts = stmts.omap(lines => this.#sc.next().omap(token => {

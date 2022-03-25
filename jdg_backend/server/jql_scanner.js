@@ -1,4 +1,4 @@
-const { TryFailure, TrySuccess } = require("./utils");
+const { Try } = require("./utils");
 
 class TokenType {
     static DO = new TokenType("<DO>");
@@ -105,7 +105,7 @@ for (let rwt of Token.RESERVED_WORDS) {
 }
 
 class JQLScanner {
-    static #STARTING_TOKEN = new TryFailure("No tokens loaded yet.");
+    static #STARTING_TOKEN = Try.failure("No tokens loaded yet.");
 
     #data;
     #ind;
@@ -136,11 +136,11 @@ class JQLScanner {
 
     #error(msg) {
         this.#halted = true;
-        return new TryFailure(this.line + " : " + msg);
+        return Try.failure(this.line + " : " + msg);
     } 
 
     #find(token) {
-        this.#curr = new TrySuccess(token);
+        this.#curr = Try.success(token);
         return this.#curr;
     }
 

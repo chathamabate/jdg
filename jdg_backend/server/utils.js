@@ -1,59 +1,121 @@
+// Try Classes.
 
-
-class TrySuccess {
-    #val;
-
-    constructor(val) {
-        this.#val = val;
+class Try {
+    static success(val) {
+        return new Try.#Success(val);
     }
 
-    omap(f) {
-        return f(this.#val);
+    static failure(msg) {
+        return new Try.#Failure(msg);
     }
 
-    map(f) {
-        return new TrySuccess(f(this.#val));
-    }
+    static #Success = class {
+        #val;
 
-    get successful() {
-        return true;
-    }
+        constructor(val) {
+            this.#val = val;
+        }
+    
+        omap(f) {
+            return f(this.#val);
+        }
+    
+        map(f) {
+            return new Try.#Success(f(this.#val));
+        }
+    
+        get successful() {
+            return true;
+        }
+    
+        get val() {
+            return this.#val;
+        }
+    
+        get error() {
+            throw new Error("This try was successful.");
+        }
+    };
 
-    get val() {
-        return this.#val;
-    }
+    static #Failure = class {
+        #msg
 
-    get error() {
-        throw new Error("This try was successful.");
+        constructor(msg) {
+            this.#msg = msg;
+        }
+    
+        omap(f) {
+            return this;
+        }
+    
+        map(f) {
+            return this;
+        }
+    
+        get successful() {
+            return false;
+        }
+    
+        get val() {
+            throw new Error("This try was not successful.");
+        }
+    
+        get msg() {
+            return this.#msg;
+        }
     }
 }
 
-class TryFailure {
-    #msg
+// Optional Classes.
 
-    constructor(msg) {
-        this.#msg = msg;
+class Option {
+    static some(val) {
+        return new Option.#Some(val);
     }
 
-    omap(f) {
-        return this;
+    static get none() {
+        return Option.#NONE_ONLY;
     }
 
-    map(f) {
-        return this;
-    }
+    static #Some = class {
+        #val;
+    
+        constructor(val) {
+            this.#val = val;
+        }
+    
+        get val() {
+            return this.#val;
+        }
+    
+        match(s, n) {
+            return s(this.#val);
+        }
 
-    get successful() {
-        return false;
-    }
+        toString() {
+            return `some<${this.#val}>`;
+        }
+    };
+    
+    static #None = class {
+        constructor() {
 
-    get val() {
-        throw new Error("This try was not successful.");
-    }
+        }
 
-    get msg() {
-        return this.#msg;
-    }
+        get val() {
+            throw new Error("None has no Value!");
+        }
+    
+        match(s, n) {
+            return n();
+        }
+
+        toString() {
+            return "none";
+        }
+    } 
+    
+    static #NONE_ONLY = new Option.#None();
 }
 
 class Cons {
@@ -95,14 +157,36 @@ class Empty {
 }
 
 class Iter {
-    #stream; // Must have a .next() function which returns an option.
+    // Zero: T.
+    // Producer: () -> Try<K>
+    // Combiner: (T, K) -> T
+    // Predicate: (Producer) -> boolean
+    static foldUntil(zero, producer, combiner, predicate) {
+        let result = zero;
 
-    constructor(stream) {
-        this.#stream = stream;
+        while (predicate()) {
+            onext = producer();
+
+            if (!onext.successful) {
+                return onext;
+            }
+
+            result = combiner(result, onext.val);
+        }
+
+        return new TrySuccess(result);
     }
-
-    
 }
 
-module.exports.TrySuccess = TrySuccess;
-module.exports.TryFailure = TryFailure;
+// class Iter {
+//     #stream; // Must have a .next() function which returns an option.
+
+//     constructor(stream) {
+//         this.#stream = stream;
+//     }
+
+
+// }
+
+module.exports.Try = Try;
+module.exports.Option = Option;
