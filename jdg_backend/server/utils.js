@@ -87,6 +87,18 @@ class Option {
         get val() {
             return this.#val;
         }
+
+        get isSome() {
+            return true;
+        }
+
+        map(f) {
+            return new Option.#Some(f(this.#val));
+        }
+
+        omap(f) {
+            return f(this.#val);
+        }
     
         match(s, n) {
             return s(this.#val);
@@ -104,6 +116,18 @@ class Option {
 
         get val() {
             throw new Error("None has no Value!");
+        }
+
+        get isSome() {
+            return false;
+        }
+
+        map(f) {
+            return this;
+        }
+
+        omap(f) {
+            return this;
         }
     
         match(s, n) {
@@ -127,13 +151,11 @@ class FList {
         return new FList.#Cons(head, tail);
     }
 
-    static reverse(flist) {
+    static of(...vals) {
         let res = FList.#ONLY_EMPTY;
-        let iter = flist;
 
-        while (!iter.isEmpty) {
-            res = new FList.#Cons(iter.head, res);
-            iter = iter.tail;
+        for (let i = vals.length - 1; i >= 0; i--) {
+            res = new FList.#Cons(vals[i], res);
         }
 
         return res;
@@ -159,6 +181,39 @@ class FList {
         get tail() {
             return this.#tail;
         }
+
+        map(f) {
+            let res = new FList.#Cons(f(this.head), FList.#ONLY_EMPTY);
+            let res_builder = res;
+            let iter = this.tail;
+
+            while (!iter.isEmpty) {
+                res_builder.#tail = new FList.#Cons(f(iter.head), FList.#ONLY_EMPTY);
+
+                res_builder = res_builder.tail;
+                iter = iter.tail;
+            }
+
+            return res;
+        }
+
+        foldl(zero, combinator) {
+            let res = zero;
+            let iter = this;
+
+            while (!iter.isEmpty) {
+                res = combinator(res, iter.head);
+                iter = iter.tail;
+            }
+
+            return res;
+        }
+
+        toString() {
+            let str_res = this.head.toString() + 
+                this.tail.foldl("", (res, ele) => res + ", " + ele);
+            return `[${str_res}]`;
+        }
     };
 
     static #Empty = class {
@@ -173,44 +228,23 @@ class FList {
         get tail() {
             throw new Error("Empty list has no head.")
         }
+
+        map(f) {
+            return this;
+        }
+
+        foldl(zero, combinator) {
+            return zero;
+        }
+
+        toString() {
+            return "[]";
+        }
     };
 
     static #ONLY_EMPTY = new FList.#Empty();
 }
 
-
-
-// class Iter {
-//     // Zero: T.
-//     // Producer: () -> Try<K>
-//     // Combiner: (T, K) -> T
-//     // Predicate: (Producer) -> boolean
-//     static foldUntil(zero, producer, combiner, predicate) {
-//         let result = zero;
-
-//         while (predicate()) {
-//             onext = producer();
-
-//             if (!onext.successful) {
-//                 return onext;
-//             }
-
-//             result = combiner(result, onext.val);
-//         }
-
-//         return new TrySuccess(result);
-//     }
-// }
-
-// class Iter {
-//     #stream; // Must have a .next() function which returns an option.
-
-//     constructor(stream) {
-//         this.#stream = stream;
-//     }
-
-
-// }
-
 module.exports.Try = Try;
 module.exports.Option = Option;
+module.exports.FList = FList;

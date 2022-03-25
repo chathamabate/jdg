@@ -1,5 +1,5 @@
 const assert = require("assert");
-const { Try } = require("../server/utils");
+const { Try, FList } = require("../server/utils");
 
 
 describe("Try Tests", () => {
@@ -25,5 +25,22 @@ describe("Try Tests", () => {
         let tf_res = tf.map(i => i + 1);
 
         assert.equal(tf, tf_res);
+    });
+});
+
+describe("FList Tests", () => {
+    it("FLT 1", () => {
+        let fl = FList.of(1, 2, 3);
+        assert.equal(fl.toString(), "[1, 2, 3]");
+    });
+
+    it("FLT 2", () => {
+        let fl = FList.of(1, 2, 3).map(i => i * 2);
+        assert.equal(fl.toString(), "[2, 4, 6]");
+    });
+
+    it("FLT 3", () => {
+        let sum = FList.of(1, 2, 3).foldl(0, (res, ele) => res + ele);
+        assert.equal(sum, 6);
     });
 });
