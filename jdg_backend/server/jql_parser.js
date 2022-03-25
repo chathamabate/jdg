@@ -340,18 +340,18 @@ class JQLParser {
     }
 
     #program() {
-        return Iter.foldUntil(Empty.ONLY, () => 
-            this.#sc.next().omap(token => {
-                switch (token.token_type) {
-                    case TokenType.EOF:
+        // return Iter.foldUntil(Empty.ONLY, () => 
+        //     this.#sc.next().omap(token => {
+        //         switch (token.token_type) {
+        //             case TokenType.EOF:
 
-                    case TokenType.DEF:
-                    case TokenType.DO:
-                    default:
-                }
-            }), 
-        (lines, res) => new Cons(res, lines),
-        () => !this.#sc.halted);
+        //             case TokenType.DEF:
+        //             case TokenType.DO:
+        //             default:
+        //         }
+        //     }), 
+        // (lines, res) => new Cons(res, lines),
+        // () => !this.#sc.halted);
 
         // Only run while the lookahead is not EOF, there have been no
         // scanner errors, and the statments try remains successful.

@@ -118,65 +118,89 @@ class Option {
     static #NONE_ONLY = new Option.#None();
 }
 
-class Cons {
-    #head;
-    #tail;
-
-    constructor(head, tail) {
-        this.#head = head;
-        this.#tail = tail;
+class FList {
+    static get empty() {
+        return FList.#ONLY_EMPTY;
     }
 
-    get isEmpty() {
-        return false;
+    static cons(head, tail) {
+        return new FList.#Cons(head, tail);
     }
 
-    get head() {
-        return this.#head;
-    }
-    
-    get tail() {
-        return this.#tail;
-    }
-}   
+    static reverse(flist) {
+        let res = FList.#ONLY_EMPTY;
+        let iter = flist;
 
-class Empty {
-    static ONLY = new Empty();
-
-    get isEmpty() {
-        return true;
-    }
-
-    get head() {
-        throw new Error("Empty list has no tail."); 
-    }
-
-    get tail() {
-        throw new Error("Empty list has no head.")
-    }
-}
-
-class Iter {
-    // Zero: T.
-    // Producer: () -> Try<K>
-    // Combiner: (T, K) -> T
-    // Predicate: (Producer) -> boolean
-    static foldUntil(zero, producer, combiner, predicate) {
-        let result = zero;
-
-        while (predicate()) {
-            onext = producer();
-
-            if (!onext.successful) {
-                return onext;
-            }
-
-            result = combiner(result, onext.val);
+        while (!iter.isEmpty) {
+            res = new FList.#Cons(iter.head, res);
+            iter = iter.tail;
         }
 
-        return new TrySuccess(result);
+        return res;
     }
+
+    static #Cons = class {
+        #head;
+        #tail;
+    
+        constructor(head, tail) {
+            this.#head = head;
+            this.#tail = tail;
+        }
+    
+        get isEmpty() {
+            return false;
+        }
+    
+        get head() {
+            return this.#head;
+        }
+        
+        get tail() {
+            return this.#tail;
+        }
+    };
+
+    static #Empty = class {
+        get isEmpty() {
+            return true;
+        }
+    
+        get head() {
+            throw new Error("Empty list has no tail."); 
+        }
+    
+        get tail() {
+            throw new Error("Empty list has no head.")
+        }
+    };
+
+    static #ONLY_EMPTY = new FList.#Empty();
 }
+
+
+
+// class Iter {
+//     // Zero: T.
+//     // Producer: () -> Try<K>
+//     // Combiner: (T, K) -> T
+//     // Predicate: (Producer) -> boolean
+//     static foldUntil(zero, producer, combiner, predicate) {
+//         let result = zero;
+
+//         while (predicate()) {
+//             onext = producer();
+
+//             if (!onext.successful) {
+//                 return onext;
+//             }
+
+//             result = combiner(result, onext.val);
+//         }
+
+//         return new TrySuccess(result);
+//     }
+// }
 
 // class Iter {
 //     #stream; // Must have a .next() function which returns an option.
