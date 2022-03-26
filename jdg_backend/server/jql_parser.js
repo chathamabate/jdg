@@ -2,75 +2,206 @@ const {Token, TokenType, JQLScanner} = require("./jql_scanner");
 const {Cons, Empty, TrySuccess, TryFailure, Iter} = require("./utils");
 
 class Program {
+    // Cons<Statement | VarDefine>
+    #stmts;
+
     constructor(stmts) {
-        this.stmts = stmts;
+        this.#stmts = stmts;
+    }
+
+    get stmts() {
+        return this.#stmts;
     }
 
     toString() {
-        return this.stmts.join("\n");
+        return this.#stmts.map(s => s.toString()).join("\n");
     }
 }
 
 class Statment {
+    // Match | Map | Or
+    #exp;
+
     constructor(exp) {
-        this.exp = exp;
+        this.#exp = exp;
+    }
+
+    get exp() {
+        return this.#exp;
     }
 
     toString() {
-        return "do " + this.exp;
+        return "do " + this.#exp.toString();
     }
 }
 
 class VarDefine {
-    constructor(ts, name, exp) {
-        this.ts = ts;
-        this.name = name;
-        this.exp = exp;
+    // Argument
+    #arg;
+
+    // Match | Map | Or
+    #exp;
+
+    constructor(arg, exp) {
+        this.#arg = arg;
+        this.#exp = exp;
+    }
+
+    get arg() {
+        return this.#arg;
+    }
+
+    get exp() {
+        return this.#exp;
     }
 
     toString() {
-        return `define ${this.ts} ${this.name} as ${this.exp}`;
+        return `define ${this.arg.toString()} as ${this.#exp.toString()}`;
+    }
+}
+
+class Case {
+    // Both Match | Map | Or
+    #test;
+    #conseq;
+
+    constructor(t, c) {
+        this.#test = t;
+        this.#conseq = c;
+    }
+
+    get test() { 
+        return this.#test;
+    }
+
+    get conseq() {
+        return this.#conseq;
+    }
+
+    toString() {
+        return this.test.toString() + " -> " + this.conseq.toString();
     }
 }
 
 class Match {
-    constructor(pivot, cases) {
-        this.pivot = pivot; // Can be null.
+    static defaultMatch(c, dc) {
+        return new Match.#DefualtMatch(c, dc);
+    }
 
-        // The last element in cases represents the defualt case.
-        this.cases = cases; // [[test, exp].... [exp]]
+    static valueMatch(p, c, dc) {
+        return new Match.#ValueMatch(p, c, dc);
+    }
+
+    static #DefualtMatch = class {
+        // Cons<Case>
+        #cases;
+
+        // Match | Map | Or
+        #defaultCase;
+
+        constructor(c, dc) {
+            this.cases = c;
+            this.#defaultCase = dc;
+        }
+
+        get pivot() {
+            throw new Error("DefaultMatch has no pivot!");
+        }
+
+        get cases() {
+            return this.#cases;
+        }
+
+        get defaultCase() {
+            return this.#defaultCase;
+        }
+
+        toString() {
+            return "match\n" + 
+                    this.#cases.map(c => c.toString()).join("\n") + 
+                    "\n" + this.#defaultCase.toString()
+        }
+    };
+
+    static #ValueMatch = class extends Match.#DefualtMatch {
+        // Match | Map | Or
+        #pivot;
+
+        constructor(p, c, dc) {
+            super(c, dc);
+            this.#pivot = p;
+        }
+
+        get pivot() {
+            return this.#pivot;
+        }
+
+        toString() {
+            return "match " + this.#pivot.toString() + "\n" +
+                this.cases.map(c => c.toString()).join("\n") + 
+                "\n" + this.defaultCase.toString()
+        }
+    }
+}
+
+class Argument {
+    // Type signature.
+    #ts;
+
+    // VarID.
+    #vid;
+
+    constructor(ts, vid) {
+        this.#ts = ts;
+        this.#vid = vid;
+    }
+
+    get ts() {
+        return this.#ts;
+    }
+
+    get vid() {
+        return this.#vid;
     }
 
     toString() {
-        case_strs = this.cases
-            .map(
-                (c, i, arr) => 
-                    i == arr.length - 1 
-                    ? "default " + c[0]
-                    : c[0] + " -> " + c[1]
-            ).join("\n");
-
-        return "match " + 
-            (this.pivot == null ? "" : this.pivot) +
-            "\n" + case_strs; 
+        return this.#ts.toString() + " " + this.#vid.toString();
     }
 }
 
 class Map {
+    // Cons<Argument>
+    #args;
+
+    // Cons<VarDefine>
+    #vdfs;
+
+    // Match | Map | Or.
+    #exp;
+
     constructor(args, vdfs, exp) {
-        this.args = args; //[[TS, Name]...]
-        this.vdfs = vdfs; // Extra Variable Defines.
-        this.exp = exp;
+        this.#args = args;
+        this.#vdfs = vdfs;
+        this.#exp = exp;
+    }
+
+    get args() {
+        return this.#args;
+    }
+
+    get vdfs() {
+        return this.#vdfs;
+    }
+
+    get exp() {
+        return this.#exp;
     }
 
     toString() {
-        type_strs = this.args.map(
-            (a) => a[0] + " " + a[1]
-        ).join(", ");
+        type_strs = this.#args.map(a => a.toString()).join(", ");
+        def_strs = this.vdfs.map(vdf => vdf.toString()).join("\n");
 
-        def_strs = this.vdfs.join("\n");
-
-        return `(${type_strs}) -> \n${def_strs}\n${this.exp}`;
+        return `(${type_strs}) -> \n${def_strs}\n${this.#exp.toString()}`;
     }
 }
 

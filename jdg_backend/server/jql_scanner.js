@@ -1,4 +1,4 @@
-const { Try } = require("./utils");
+const { Try, Option } = require("./utils");
 
 class TokenType {
     static DO = new TokenType("<DO>");
