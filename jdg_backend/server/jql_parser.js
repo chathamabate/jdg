@@ -1,5 +1,5 @@
 const {Token, TokenType, JQLScanner} = require("./jql_scanner");
-const {Cons, Empty, TrySuccess, TryFailure, Iter} = require("./utils");
+const {Cons, Empty, TrySuccess, TryFailure, Iter, FList} = require("./utils");
 
 class Program {
     // Cons<Statement | VarDefine>
@@ -203,6 +203,82 @@ class Map {
 
         return `(${type_strs}) -> \n${def_strs}\n${this.#exp.toString()}`;
     }
+}
+
+class BooleanChain {
+    static orChain(exps) {
+        return new BooleanChain.#OrChain(exps);
+    } 
+
+    static andChain(exps) {
+        return new BooleanChain.#AndChain(exps);
+    }
+
+    static #DefChain = class {
+        // Cons<AND | NOT> must have length >= 2.
+        #exps;
+
+        constructor(exps) {
+            this.#exps = exps;
+        }
+
+        get exps() {
+            return this.#exps;
+        }
+
+        get opLex() {
+            throw new Error("Default chain has no operator.");
+        }
+
+        toString() {
+            return this.#exps.tail.foldl(this.#exps.head.toString(), 
+                (res, ele) => `${res} ${this.opLex} ${ele.toString()}`);
+        }
+    };
+
+    static #OrChain = class extends BooleanChain.#DefChain {
+        // exps should be Cons<AND> 
+        constructor(exps) {
+            super(exps);
+        }
+
+        get opLex() {
+            return Token.T_OR.lexeme;
+        }
+    };
+
+    static #AndChain = class extends BooleanChain.#DefChain {
+        // exp should be Cons<NOT>
+        constructor(exps) {
+            super(exps);
+        }
+
+        get opLex() {
+            return Token.T_AND.lexeme;
+        }
+    };
+}
+
+
+class OpChainTerm {
+    // * / - + % and or Token.
+    #op;
+
+    // Match | Map | Or
+    #val;
+}
+
+// How to struct Ors and Ands... 
+// Or any Binop grammar rule...
+
+// Or chains...
+// and chains...
+// + - chains...
+// * / % chains...
+
+// This can represent 
+class BinopExp {
+
 }
 
 class Or {
