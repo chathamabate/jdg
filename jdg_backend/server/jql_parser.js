@@ -1,3 +1,4 @@
+const { CopyResponse } = require("pg-protocol/dist/messages");
 const {Token, TokenType, JQLScanner} = require("./jql_scanner");
 const {Cons, Empty, TrySuccess, TryFailure, Iter, FList} = require("./utils");
 
@@ -259,13 +260,315 @@ class BooleanChain {
     };
 }
 
+class Not {
+    // Comparison.
+    #cmp;
+
+    constructor(cmp) {
+        this.#cmp = cmp;
+    }
+
+    get comparison() {
+        return this.#cmp;
+    }
+
+    toString() {
+        return "not " + this.#cmp.toString();
+    }
+}
+
+class Comparison {
+    static equals(lsum, rsum) {
+        return new Comparison.#Eq(lsum, rsum);
+    }
+
+    static ltEquals(lsum, rsum) {
+        return new Comparison.#LtEq(lsum, rsum);
+    }
+
+    static gtEquals(lsum, rsum) {
+        return new Comparison.#GtEq(lsum, rsum);
+    }
+
+    static lt(lsum, rsum) {
+        return new Comparison.#Lt(lsum, rsum);
+    }
+
+    static gt(lsum, rsum) {
+        return new Comparison.#Gt(lsum, rsum);
+    }
+
+    static #DefCmp = class {
+        // Both summantions.
+        #lsum;
+        #rsum;
+
+        constructor(lsum, rsum) {
+            this.#lsum = lsum;
+            this.#rsum = rsum;
+        }
+    
+        get leftSum() {
+            return this.#lsum;
+        }
+    
+        get rightSum() {
+            return this.#rsum;
+        }
+    
+        get opLex() {
+            throw new Error("Empty Comparison has no opLex!");
+        }
+    
+        toString() {
+            return `${this.#lsum.toString()} ${this.opLex} ${this.#rsum.toString()}`;
+        }
+    };
+
+    static #Eq = class extends Comparison.#DefCmp {
+        constructor(lsum, rsum) {
+            super(lsum, rsum);
+        }
+
+        get opLex() {
+            return Token.T_EQU.lexeme;
+        }
+    };
+
+    static #LtEq = class extends Comparison.#DefCmp {
+        constructor(lsum, rsum) {
+            super(lsum, rsum);
+        }
+
+        get opLex() {
+            return Token.T_LTE.lexeme;
+        }
+    };
+
+    static #GtEq = class extends Comparison.#DefCmp {
+        constructor(lsum, rsum) {
+            super(lsum, rsum);
+        }
+
+        get opLex() {
+            return Token.T_GTE.lexeme;
+        }
+    };
+
+    static #Lt = class extends Comparison.#DefCmp {
+        constructor(lsum, rsum) {
+            super(lsum, rsum);
+        }
+
+        get opLex() {
+            return Token.T_LT.lexeme;
+        }
+    };
+
+    static #Gt = class extends Comparison.#DefCmp {
+        constructor(lsum, rsum) {
+            super(lsum, rsum);
+        }
+
+        get opLex() {
+            return Token.T_GT.lexeme;
+        }
+    };
+}
+
 
 class OpChainTerm {
-    // * / - + % and or Token.
-    #op;
+    static add(val) {
+        return new OpChainTerm.#AddCT(val);
+    }
 
-    // Match | Map | Or
+    static sub(val) {
+        return new OpChainTerm.#SubCT(val);
+    }
+
+    static times(val) {
+        return new OpChainTerm.#TimesCT(val);
+    }
+
+    static div(val) {
+        return new OpChainTerm.#DivCT(val);
+    }
+
+    static mod(val) {
+        return new OpChainTerm.#ModCT(val);
+    }
+
+    static #DefOpCT = class {
+        #val;
+
+        constructor(val) {
+            this.#val = val;
+        }
+
+        get opLex() {
+            throw new Error("Defualt term has no op lex!");
+        }
+
+        toString() {
+            return this.opLex + " " + this.#val.toString();
+        }
+    }
+
+    static #AddCT = class extends OpChainTerm.#DefOpCT {
+        constructor(val) {
+            super(val);
+        }
+
+        get opLex() {
+            return Token.T_PLS.lexeme;
+        }
+    }
+
+    static #SubCT = class extends OpChainTerm.#DefOpCT {
+        constructor(val) {
+            super(val);
+        }
+
+        get opLex() {
+            return Token.T_MIN.lexeme;
+        }
+    }
+
+    static #TimesCT = class extends OpChainTerm.#DefOpCT {
+        constructor(val) {
+            super(val);
+        }
+
+        get opLex() {
+            return Token.T_TIM.lexeme;
+        }
+    }
+
+    static #DivCT = class extends OpChainTerm.#DefOpCT {
+        constructor(val) {
+            super(val);
+        }
+
+        get opLex() {
+            return Token.T_DIV.lexeme;
+        }
+    }
+
+    static #ModCT = class extends OpChainTerm.#DefOpCT {
+        constructor(val) {
+            super(val);
+        }
+
+        get opLex() {
+            return Token.T_MOD.lexeme;
+        }
+    }
+}
+
+class OpChain {
+    // Op Chain can either represent an arithmetic summation
+    // or a geometric summation.
+
+    // If Algebreic, Product.
+    // If Geometric, Negation.
+    #head;
+
+    // If Algebreic, FList<+|- Geometric>
+    // If Geometric, FList<*|/|% Negation>
+    #opChain;
+
+    constructor(head, opChain) {
+        this.#head = head;
+        this.#opChain = opChain;
+    }
+
+    get head() {
+        return this.#head;
+    }
+
+    get opChain() {
+        return this.#opChain;
+    }
+
+    toString() {
+        return this.#opChain.foldl(
+            this.#head.toString(),
+            (res, ele) => res + " " + ele.toString()
+        );
+    }
+}
+
+class Negation {
+    // APP
     #val;
+
+    constructor(val) {
+        this.#val = val;
+    }
+
+    get val() {
+        return this.#val;
+    }
+
+    toString() {
+        return Token.T_MIN.lexeme + this.#val;
+    }
+}
+
+class SubScript {
+    // A subscript represents a function application,
+    // or an index into a vector.
+    // These operations have equal precedence.
+
+    static index(exp) {
+        return new SubScript.#Index(exp);
+    }
+
+    static argList(args) {
+        return new SubScript.#ArgList(args);
+    }
+
+    static #DefSS = class {
+        constructor() {
+            // Info Here tbd...
+        }
+    }
+
+    static #Index = class extends SubScript.#DefSS {
+        // Match | Map | Or
+        #exp;
+
+        constructor(exp) {
+            super();
+            this.#exp = exp;
+        }
+
+        toString() {
+            return "[" + this.#exp.toString() + "]";
+        }
+    }
+
+    static #ArgList = class extends SubScript.#DefSS {
+        // FList<Match | Map | Or>
+        #args;
+
+        constructor(args) {
+            super();
+            this.#args = args;
+        }
+
+        toString() {
+            if (this.#args.isEmpty) {
+                return "()";
+            }
+
+            return "(" +
+            this.#args.tail.foldl(
+                this.#args.head.toString(),
+                (res, ele) => res + ", " + ele.toString()
+            ) + ")";
+        }
+    }
 }
 
 // How to struct Ors and Ands... 
@@ -276,207 +579,7 @@ class OpChainTerm {
 // + - chains...
 // * / % chains...
 
-// This can represent 
-class BinopExp {
 
-}
-
-class Or {
-    constructor(ands) {
-        this.ands = ands;
-    }
-
-    toString() {
-        return this.ands.join(" or "); 
-    }
-}
-
-class And {
-    constructor(nots) {
-        this.nots = nots;
-    }
-
-    toString() {
-        return this.nots.join(" and ");
-    }
-}
-
-class Not {
-    constructor(compare) {
-        this.compare = compare;
-    }
-
-    toString() {
-        return "not " + this.compare;
-    }
-}
-
-class Comparison {
-    constructor(sum1, cmp, sum2) {
-        this.sum1 = sum1;
-        this.cmp = cmp; // Should be a Token.
-        this.sum2 = sum2;
-    }
-
-    toString() {
-        return `${this.sum1} ${this.cmp.lex} ${this.sum2}`;
-    }
-}
-
-class Summation {
-    // prods should be in the form...
-    // [prod, Token.T_PLS | Token.T_MIN, prod ...]
-    constructor(prods) {
-        this.prods = prods;
-    }
-
-    toString() {
-        return this.prods.map(
-            (p, i) =>
-                i % 2 == 1 ? p.lex : p
-        ).join(" ");
-    }
-}
-
-class Product {
-    // negs should be in the form...
-    // [neg, TokenType.TIM | TokenType.DIV | TokenType.MOD, neg ...]
-    constructor(negs) {
-        this.negs = negs;
-    }
-
-
-    toString() {
-        return this.prods.map(
-            (p, i) =>
-                i % 2 == 1 ? p.lex : p
-        ).join(" ");
-    }
-}
-
-class Negation {
-    constructor(term) {
-        this.term = term;
-    }
-
-    toString() {
-        return "-" + this.term;
-    }
-}
-
-class Index {
-    constructor(adr, iexp) {
-        this.adr = adr;
-        this.iexp = iexp;
-    }
-
-    toString() {
-        return `${this.adr}[${this.iexp}]`;
-    }
-}
-
-class Application {
-    constructor(adr, args) {
-        this.adr = adr;
-        this.args = args;
-    }
-
-    toString() {
-        return `${this.adr}(${this.args.join(", ")})`;
-    }
-}
-
-class BoolVal {
-    static TRUE = new BoolVal(true);
-    static FALSE = new BoolVal(false);
-
-    constructor(bvl) {
-        this.bvl = bvl;
-    }
-
-    toString() {
-        return this.bvl + "";
-    }
-}
-
-class NumVal {
-    constructor(nmv) {
-        this.nmv = nmv;
-    }
-
-    toString() {
-        return this.nmv + "";
-    }
-}
-
-class StringVal {
-    constructor(stv) {
-        this.stv = stv;
-    }
-
-    toString() {
-        return "\"" + stv + "\"";
-    }
-}
-
-class VarID {
-    constructor(name) {
-        this.name = name;
-    }
-
-    toString() {
-        return this.name;
-    }
-}
-
-class Vector {
-    constructor(exps) {
-        this.exps = exps;
-    }
-
-    toString() {
-        return `[${this.exp.join(", ")}]`;
-    }
-}
-
-class Grouping {
-    constructor(exp) {
-        this.exp = exp;
-    }
-
-    toString() {
-        return "(" + this.exp + ")";
-    }
-}
-
-
-// // Not entirely necessary visitor class here...
-// // But useful for thought.
-// class TypeSigVisitor {
-//     forVecTS(vts) {
-//         throw new Error("Vec Type Signature not implemented.");
-//     }
-
-//     forMapTS(mts) {
-//         throw new Error("Map Type Signature not implemented.");
-//     }
-
-//     forNumTS(nts) {
-//         throw new Error("Num Type Signature not implemented.");
-//     }
-
-//     forBoolTS(bts) {
-//         throw new Error("Bool Type Signature not implemented.");
-//     }
-
-//     forStrTS(sts) {
-//         throw new Error("Str Type Signature not implemented.");
-//     }
-
-//     forGenericTS(gts) {
-//         throw new Error("Generic Type Signature not implemented.");
-//     }
-// }
 
 class VecTypeSig {
     constructor(arg) {
