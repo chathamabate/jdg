@@ -515,116 +515,232 @@ class Negation {
     }
 }
 
+class Index {
+    // Match | Map | Or
+    #exp;
+
+    constructor(exp) {
+        this.#exp = exp;
+    }
+
+    toString() {
+        return "[" + this.#exp.toString() + "]";
+    }
+}
+
+class ArgList {
+    // FList<Match | Map | Or>
+    #args;
+
+    constructor(args) {
+        this.#args = args;
+    }
+
+    toString() {
+        return this.#args.match(
+            (head, tail) => tail.foldl(
+                head.toString(), (res, ele) => res + ", " + ele.toString()
+            ),
+            () => "()"  
+        );
+    }
+}
+
 class SubScript {
-    // A subscript represents a function application,
-    // or an index into a vector.
-    // These operations have equal precedence.
+    // Grouping | ID | Vec
+    #pivot;
 
-    static index(exp) {
-        return new SubScript.#Index(exp);
+    // Nonempty FList<Index | ArgList>
+    #subscripts;    
+
+    constructor(p, sss) {
+        this.#pivot = p;
+        this.#subscripts = sss;
     }
 
-    static argList(args) {
-        return new SubScript.#ArgList(args);
+    get pivot() {
+        return this.#pivot;
     }
 
-    static #DefSS = class {
-        constructor() {
-            // Info Here tbd...
+    get subscripts() {
+        return this.#subscripts;
+    }
+
+    toString() {
+        return this.#subscripts.foldl(
+            this.#pivot.toString(),
+            (res, ele) => res + ele.toString()
+        );
+    }
+}
+
+class Identifier {
+    // String value.
+    #name;
+
+    constructor(name) {
+        this.#name = name;
+    }
+
+    get name() {
+        return this.#name;
+    }
+
+    toString() {
+        return this.#name;
+    }
+}
+
+class Vector {
+    // FList<Match | Map | Or>
+    #exps;
+
+    constructor(exps) {
+        this.#exps = exps;
+    }
+
+    get exps() {
+        return this.#exps;
+    }
+
+    toString() {
+        return this.#exps.match(
+            (head, tail) => 
+                "[" + tail.foldl(
+                    head.toString(), 
+                    (res, ele) => res + ", " + ele.toString()
+                ) + "]",
+            () => "[]"
+        );
+    }
+}
+
+class Grouping {
+    // Match | Map | Or
+    #exp;
+
+    constructor(exp) {
+        this.#exp = exp;
+    }
+
+    get exp() {
+        return this.#exp;
+    }
+
+    toString() {
+        return "(" + this.#exp.toString() + ")";
+    }
+}
+
+class PrimitiveValue {
+    static numVal(val) {
+        return new PrimitiveValue.#NumVal(val);
+    }
+
+    static stringVal(val) {
+        return new PrimitiveValue.#StrVal(val);
+    }
+
+    static #DVal = class {
+        #val;
+
+        constructor(val) {
+            this.#val = val;
         }
-    }
 
-    static #Index = class extends SubScript.#DefSS {
-        // Match | Map | Or
-        #exp;
-
-        constructor(exp) {
-            super();
-            this.#exp = exp;
+        get value() {
+            return this.#val;
         }
 
         toString() {
-            return "[" + this.#exp.toString() + "]";
+            return this.#val.toString();
         }
     }
 
-    static #ArgList = class extends SubScript.#DefSS {
-        // FList<Match | Map | Or>
-        #args;
+    static #BoolVal = class extends PrimitiveValue.#DVal {
+        constructor(val) {
+            super(val);
+        }
+    }
 
-        constructor(args) {
-            super();
-            this.#args = args;
+    static #NumVal = class extends PrimitiveValue.#DVal {
+        constructor(val) {
+            super(val);
+        }
+    }
+
+    static #StrVal = class extends PrimitiveValue.#DVal {
+        constructor(val) {
+            super(val);
         }
 
         toString() {
-            if (this.#args.isEmpty) {
-                return "()";
-            }
-
-            return "(" +
-            this.#args.tail.foldl(
-                this.#args.head.toString(),
-                (res, ele) => res + ", " + ele.toString()
-            ) + ")";
+            return "\"" + this.#val + "\"";
         }
     }
+
+    static TRUE = new PrimitiveValue.#BoolVal(true);
+    static FALSE = new PrimitiveValue.#BoolVal(false);
 }
 
-// How to struct Ors and Ands... 
-// Or any Binop grammar rule...
-
-// Or chains...
-// and chains...
-// + - chains...
-// * / % chains...
-
-
-
-class VecTypeSig {
-    constructor(arg) {
-        this.arg = arg;
+class TypeSig {
+    static #TypeNum = class {
+        toString() {
+            return Token.T_NUM.lexeme;
+        }
     }
 
-    toString() {
-        return `vec<${this.arg}>`;
-    }
-}
-
-class MapTypeSig {
-    constructor(args, out) {
-        this.args = args;
-        this.out = out;
+    static #TypeBool = class {
+        toString() {
+            return Token.T_BUL.lexeme;
+        }
     }
 
-    toString() {
-        return this.args.length == 0 
-            ? `map<${this.out}>` 
-            : `map<${this.args.join(", ")}, ${this.out}>`;
-    } 
-}
-
-class NumTypeSig {
-    static ONLY = new NumTypeSig();
-
-    toString() {
-        return "num";
+    static #TypeStr = class {
+        toString() {
+            return Token.T_STR.lexeme;
+        }
     }
-}
 
-class BoolTypeSig {
-    static ONLY = new BoolTypeSig();
+    static NUM = new TypeSig.#TypeNum();
+    static BOOL = new TypeSig.#TypeBool();
+    static STR = new TypeSig.#TypeStr();
 
-    toString() {
-        return "bool";
+    static #TypeVec = class {
+        // TypeSig | VID
+        #innerType;
+        constructor(it) {
+            this.#innerType = it;
+        }
+
+        get innerType() {
+            return this.#innerType;
+        }
+
+        toString() {
+            return `vec<${this.#innerType.toString()}>`
+        }
     }
-}
 
-class StrTypeSig {
-    static ONLY = new StrTypeSig();
+    static #TypeMap = class {
+        #inputTypes;
+        #outputType;
+        constructor(its, ot) {
+            this.#inputTypes  = its;
+            this.#outputType = ot;
+        }
 
-    toString() {
-        return "str";
+        get inputTypes() {
+            return this.#inputTypes;
+        }
+
+        get outputType() {
+            return this.#outputType;
+        }
+
+        toString() {
+            return  
+        }
     }
 }
 

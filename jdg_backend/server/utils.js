@@ -209,6 +209,10 @@ class FList {
             return res;
         }
 
+        match(ifFull, ifEmpty) {
+            return ifFull(this.#head, this.#tail);
+        }
+
         toString() {
             let str_res = this.head.toString() + 
                 this.tail.foldl("", (res, ele) => res + ", " + ele);
@@ -235,6 +239,10 @@ class FList {
 
         foldl(zero, combinator) {
             return zero;
+        }
+
+        match(ifFull, ifEmpty) {
+            return ifEmpty();
         }
 
         toString() {

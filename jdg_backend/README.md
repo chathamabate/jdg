@@ -72,8 +72,8 @@ Left recursive fold operation.
 <BLV> ::= true | false
 <NMV> ::= ([1-9][0-9]*|0)(\.[0-9]+)?
 <STV> ::= "[^"\n]*"
-<GTP> ::= vec<<GTP>>
-        | map<<GTP> (, <GTP>)*>
+<GTP> ::= vec\( <GTP> \)
+        | map\( (<GTP> (, <GTP>)*)? \)<GTP>
         | <PTP>
         | <VID>
 <PTP> ::= num | bool | str
