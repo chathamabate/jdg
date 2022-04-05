@@ -51,8 +51,8 @@ Left recursive fold operation.
 <STM> ::= do <EXP>
 <VDF> ::= define <GTP> <VID> as <EXP>
 <EXP> ::= <MAP> | <MAT> | <ORR>
-<MAP> ::= \( (<GTP> <VID> (, <GTP> <VID>)*)? \) -> (<VDF>)* <EXP>
-<MAT> ::= match (<EXP>)? (case <EXP> -> <EXP>,)* default <EXP> 
+<MAP> ::= map \( (<GTP> <VID> (, <GTP> <VID>)*)? \) -> (<VDF>)* <EXP>
+<MAT> ::= match (<EXP>)? (case <EXP> -> <EXP>)* default <EXP> 
 <ORR> ::= <AND> (or <AND>)* // Most zoomed out level of a singular value.
 <AND> ::= <NOT> (and <NOT>)*
 <NOT> ::= (not)? <CMP>

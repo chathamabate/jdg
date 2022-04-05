@@ -34,11 +34,16 @@ class JQLParser {
         throw new JQLParseError(this.#sc.line, msg);
     }
 
+    #Expect(token_type, msg) {
+        this.#sc.next();
+        this.#expect(token_type, msg);
+    }
+
     #expect(token_type, msg) {
-        let token = this.#sc.next();
+        let token = this.#sc.curr;
 
         if (token.token_type != token_type) {
-            this.#error(msg);
+            this.#error(msg + " " + token.token_type.toString());
         }
 
         return token;
@@ -68,8 +73,6 @@ class JQLParser {
                 default:
                     this.#error("\"do\" or \"define\" tokens required in beginning of statement.");
             }
-
-            lah = this.#sc.next();
         }
     }
 
@@ -80,8 +83,8 @@ class JQLParser {
 
     #varDefine() {
         let ts = this.#typeSig();
-        let id_tok = this.#expect(TokenType.VID);
-        this.#expect(TokenType.AS, "Define statement missing \"as\' token.");
+        let id_tok = this.#expect(TokenType.VID, "Define statement missing identifier.");
+        this.#Expect(TokenType.AS, "Define statement missing \"as\' token.");
         let exp = this.#Expression();
 
         return new TreeTypes.VarDefine(
@@ -102,6 +105,9 @@ class JQLParser {
             case TokenType.LBR:
                 let vecTS = this.#TypeSig();
                 this.#expect(TokenType.RBR, "Vector type signature not enclosed.")
+
+                this.#sc.next() // Advance.
+
                 return TreeTypes.TypeSig.typeVec(vecTS);
             case TokenType.LPN:
                 let input_types = FList.EMPTY;
@@ -111,7 +117,7 @@ class JQLParser {
                     input_types = FList.cons(this.#typeSig(), input_types);
 
                     while (true) {
-                        lah = this.#sc.next();
+                        lah = this.#sc.curr;
 
                         if (lah.token_type == TokenType.RPN) {
                             break;
@@ -125,16 +131,20 @@ class JQLParser {
                     }
                 }
 
-                this.#expect(TokenType.ARR, "\"->\" token missing from map type signature.");
+                this.#Expect(TokenType.ARR, "\"->\" token missing from map type signature.");
 
                 return TreeTypes.TypeSig.typeMap(input_types.reverse(), this.#TypeSig());
             case TokenType.NUM:
+                this.#sc.next(); // Advance.
                 return TreeTypes.TypeSig.NUM;
             case TokenType.STR:
+                this.#sc.next(); // Advance.
                 return TreeTypes.TypeSig.STR;
             case TokenType.BUL:
+                this.#sc.next(); // Advance.
                 return TreeTypes.TypeSig.BOOL;
             case TokenType.VID:
+                this.#sc.next(); // Advance.
                 return new TreeTypes.Identifier(lah.lexeme);
             default:
                 this.#error("Cannot parse type signature.")
@@ -147,10 +157,80 @@ class JQLParser {
     }
 
     #expresssion() {
-        
+        // Match, Map, or ORR
+        let lah = this.#sc.curr;
+        switch (lah.token_type) {
+            case TokenType.MAT:
+                return this.#Match();
+            case TokenType.MAP:
+                return this.#Map();
+            default:
+                return this.#or();
+        }
+    }
+
+    // Assumes match keyword has already been read.
+    #Match() {
+        this.#sc.next();
+        return this.#match();
+    }
+
+    #match() {
+        let lah = this.#sc.curr;
+        let headed_match = false;
+        let head = null;
+
+        if (lah.token_type != TokenType.CAS && 
+                lah.token_type != TokenType.DFT) {
+            headed_match = true;
+            head = this.#expresssion();
+        }
+
+        let cases = FList.EMPTY;
+
+        while (true) {
+            lah = this.#sc.curr;
+
+            if (lah.token_type == TokenType.CAS) {
+                let test = this.#Expression();
+                this.#expect(TokenType.ARR, "Arrow not found in case statment.");
+                let conseq = this.#Expression();
+
+                cases = FList.cons(new TreeTypes.Case(test, conseq), cases);
+            } else if (lah.token_type == TokenType.DFT) {
+                return headed_match 
+                    ? TreeTypes.Match.valueMatch(head, cases, this.#Expression()) 
+                    : TreeTypes.Match.defaultMatch(cases, this.#Expression());
+            } else {
+                this.#error("Unexpected token in match statement.");
+            }
+        }
+    }
+
+    // Assumes map keyword has already been read.
+    #Map() {
+        this.#sc.next();
+        return TreeTypes.BooleanChain.orChain(FList.of("5", "6"));
+    }
+
+    #map() {
+    }
+
+    #Or() {
+        this.#sc.next();
+        return this.#or();
+    }
+
+    #or() {
+        this.#sc.next();
+        return TreeTypes.BooleanChain.orChain(FList.of("1", "2"));
     }
 }
 
-var pr = "define ([num],str)->[(num) -> num] a as "
+var pr = `
+define ([num],str)->[(num) -> num] a as 
+    match 
+        default 1
+`
 
 console.log((new JQLParser(pr)).parse().toString());

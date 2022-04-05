@@ -85,7 +85,7 @@ class Case {
     }
 
     toString() {
-        return this.test.toString() + " -> " + this.conseq.toString();
+        return "case " + this.test.toString() + " -> " + this.conseq.toString();
     }
 }
 
@@ -99,14 +99,14 @@ class Match {
     }
 
     static #DefualtMatch = class {
-        // Cons<Case>
+        // FList<Case>
         #cases;
 
         // Match | Map | Or
         #defaultCase;
 
         constructor(c, dc) {
-            this.cases = c;
+            this.#cases = c;
             this.#defaultCase = dc;
         }
 
@@ -123,9 +123,10 @@ class Match {
         }
 
         toString() {
-            return "match\n" + 
-                    this.#cases.map(c => c.toString()).join("\n") + 
-                    "\n" + this.#defaultCase.toString()
+            return "match" + 
+                    this.#cases.foldl("", 
+                        (res, ele) => res + "\n" + ele.toString()) + 
+                    "\ndefault " + this.#defaultCase.toString()
         }
     };
 
@@ -143,9 +144,10 @@ class Match {
         }
 
         toString() {
-            return "match " + this.#pivot.toString() + "\n" +
-                this.cases.map(c => c.toString()).join("\n") + 
-                "\n" + this.defaultCase.toString()
+            return "match " + this.#pivot.toString() + 
+                this.cases.foldl("", 
+                    (res, ele) => res + "\n" + ele.toString()) + 
+                "\ndefault " + this.defaultCase.toString()
         }
     }
 }
