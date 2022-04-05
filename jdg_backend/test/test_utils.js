@@ -1,6 +1,5 @@
 const assert = require("assert");
 const { Try, FList } = require("../server/utils");
-const parser = require("../server/jql_parser")
 
 describe("Try Tests", () => {
     it("TT 1", () => {

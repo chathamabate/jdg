@@ -1,4 +1,10 @@
-const { Try, Option } = require("./utils");
+const { Try, Option, JQLError } = require("./utils");
+
+class JQLSyntaxError extends JQLError {
+    constructor(line, msg) {
+        super(line, msg);
+    }
+}
 
 class TokenType {
     static DO = new TokenType("<DO>");
@@ -10,8 +16,8 @@ class TokenType {
     static OR = new TokenType("<OR>");
     static AND = new TokenType("<AND>");
     static NOT = new TokenType("<NOT>");
-    static VEC = new TokenType("<VEC>");
-    static MAP = new TokenType("<MAP>");
+    // static VEC = new TokenType("<VEC>");
+    // static MAP = new TokenType("<MAP>");
     static NUM = new TokenType("<NUM>");
     static BUL = new TokenType("<BUL>");
     static STR = new TokenType("<STR>");
@@ -40,9 +46,14 @@ class TokenType {
     static BLV = new TokenType("<BLV>");
     static VID = new TokenType("<VID>");
 
+    #name;
 
     constructor(name) {
-        this.name = name;
+        this.#name = name;
+    }
+
+    get name() {
+        return this.#name;
     }
 }
 
@@ -56,8 +67,8 @@ class Token {
     static T_OR = new Token("or", TokenType.OR);
     static T_AND = new Token("and", TokenType.AND);
     static T_NOT = new Token("not", TokenType.NOT);
-    static T_VEC = new Token("vec", TokenType.VEC);
-    static T_MAP = new Token("map", TokenType.MAP);
+    // static T_VEC = new Token("vec", TokenType.VEC);
+    // static T_MAP = new Token("map", TokenType.MAP);
     static T_NUM = new Token("num", TokenType.NUM);
     static T_BUL = new Token("bool", TokenType.BUL);
     static T_STR = new Token("str", TokenType.STR);
@@ -68,8 +79,8 @@ class Token {
     static RESERVED_WORDS = [
         Token.T_DO, Token.T_AS, Token.T_DEF, 
         Token.T_MAT, Token.T_CAS, Token.T_DFT, 
-        Token.T_OR, Token.T_AND, Token.T_NOT, Token.T_VEC, 
-        Token.T_MAP, Token.T_NUM, Token.T_BUL, Token.T_STR,
+        Token.T_OR, Token.T_AND, Token.T_NOT,
+        Token.T_NUM, Token.T_BUL, Token.T_STR,
         Token.T_TRU, Token.T_FAL
     ];
 
@@ -92,9 +103,20 @@ class Token {
 
     static T_EOF = new Token("\\0", TokenType.EOF);
 
+    #token_type;
+    #lexeme;
+
     constructor(lex, tt) {
-        this.lexeme = lex;
-        this.token_type = tt;
+        this.#lexeme = lex;
+        this.#token_type = tt;
+    }
+
+    get token_type() {
+        return this.#token_type;
+    }
+
+    get lexeme() {
+        return this.#lexeme;
     }
 }
 
@@ -111,7 +133,7 @@ class JQLScanner {
     #ind;
     #line;
     #halted;
-    #curr;
+    #curr; // Try holding the last token to be read.
 
     constructor(data) {
         this.#data = data;
@@ -136,11 +158,11 @@ class JQLScanner {
 
     #error(msg) {
         this.#halted = true;
-        return Try.failure(this.line + " : " + msg);
+        throw new JQLSyntaxError(this.#line, msg);
     } 
 
     #find(token) {
-        this.#curr = Try.success(token);
+        this.#curr = token;
         return this.#curr;
     }
 
@@ -148,7 +170,7 @@ class JQLScanner {
     // next returns a Try which either contains the read token or an error.
     next() {
         if (this.#halted) {
-            return this.#error("Scanner has been halted.");
+            throw new JQLSyntaxError(0, "Scanner has been halted.");
         }
 
         // Get first non whitespace character.
@@ -219,7 +241,7 @@ class JQLScanner {
                 while (this.#ind < this.#data.length) {
                     n = this.#data[this.#ind++];
                     if (n == "\n") {
-                        return this.#error("Strings cannot be multi line.");
+                        this.#error("Strings cannot be multi line.");
                     }
 
                     lex += n;
@@ -229,7 +251,7 @@ class JQLScanner {
                     }
                 }
 
-                return this.#error("String missing closing quote.");
+                this.#error("String missing closing quote.");
             default:
                 return this.#nextNumResOrID(c);
         }
@@ -307,10 +329,11 @@ class JQLScanner {
             return this.#find(new Token(lex, TokenType.VID));
         }
 
-        return this.#error("Invalid token starting character " + c + ".");
+        this.#error("Invalid token starting character " + c + ".");
     }
 }
 
 module.exports.TokenType = TokenType;
 module.exports.Token = Token;
 module.exports.JQLScanner = JQLScanner;
+module.exports.JQLSyntaxError = JQLSyntaxError;

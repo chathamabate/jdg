@@ -1,3 +1,27 @@
+
+// Base JQL Error type.
+class JQLError {
+    #msg;
+    #line;
+
+    constructor(line, msg) {
+        this.#line = line;
+        this.#msg = msg;
+    }
+
+    get msg() {
+        return this.#msg;
+    }
+
+    get line() {
+        return this.#line;
+    }
+
+    toString() {
+        return this.#line + " : "  + this.#msg;
+    }
+}
+
 // Try Classes.
 
 class Try {
@@ -19,9 +43,21 @@ class Try {
         omap(f) {
             return f(this.#val);
         }
+
+        smap(f) {
+            return f(this);
+        }
     
         map(f) {
             return new Try.#Success(f(this.#val));
+        }
+
+        test(pred, err_try_gen) {
+            if (!pred(this.#val)) {
+                return err_try_gen();
+            }
+
+            return this;
         }
     
         get successful() {
@@ -35,6 +71,10 @@ class Try {
         get error() {
             throw new Error("This try was successful.");
         }
+
+        toString() {
+            return `success{${this.#val.toString()}}`;
+        }
     };
 
     static #Failure = class {
@@ -47,10 +87,19 @@ class Try {
         omap(f) {
             return this;
         }
+
+        smap(f) {
+            return this;
+        }
     
         map(f) {
             return this;
         }
+
+        test(pred, err_try_gen) {
+            return this;
+        }
+
     
         get successful() {
             return false;
@@ -62,6 +111,10 @@ class Try {
     
         get msg() {
             return this.#msg;
+        }
+
+        toString() {
+            return `failure{${this.#msg}}`;
         }
     }
 }
@@ -143,16 +196,13 @@ class Option {
 }
 
 class FList {
-    static get empty() {
-        return FList.#ONLY_EMPTY;
-    }
 
     static cons(head, tail) {
         return new FList.#Cons(head, tail);
     }
 
     static of(...vals) {
-        let res = FList.#ONLY_EMPTY;
+        let res = FList.EMPTY;
 
         for (let i = vals.length - 1; i >= 0; i--) {
             res = new FList.#Cons(vals[i], res);
@@ -183,12 +233,12 @@ class FList {
         }
 
         map(f) {
-            let res = new FList.#Cons(f(this.head), FList.#ONLY_EMPTY);
+            let res = new FList.#Cons(f(this.head), FList.EMPTY);
             let res_builder = res;
             let iter = this.tail;
 
             while (!iter.isEmpty) {
-                res_builder.#tail = new FList.#Cons(f(iter.head), FList.#ONLY_EMPTY);
+                res_builder.#tail = new FList.#Cons(f(iter.head), FList.EMPTY);
 
                 res_builder = res_builder.tail;
                 iter = iter.tail;
@@ -207,6 +257,12 @@ class FList {
             }
 
             return res;
+        }
+
+        reverse() {
+            return this.foldl(FList.EMPTY, 
+                (res, ele) => FList.cons(ele, res)
+            );
         }
 
         match(ifFull, ifEmpty) {
@@ -241,6 +297,10 @@ class FList {
             return zero;
         }
 
+        reverse() {
+            return this;
+        }
+
         match(ifFull, ifEmpty) {
             return ifEmpty();
         }
@@ -250,9 +310,10 @@ class FList {
         }
     };
 
-    static #ONLY_EMPTY = new FList.#Empty();
+    static EMPTY = new FList.#Empty();
 }
 
 module.exports.Try = Try;
 module.exports.Option = Option;
 module.exports.FList = FList;
+module.exports.JQLError = JQLError;

@@ -1,5 +1,5 @@
 const assert = require("assert");
-const {TokenType, Token, JQLScanner} = require("../server/jql_scanner");
+const {TokenType, Token, JQLScanner, JQLSyntaxError} = require("../server/jql_scanner");
 
 function expectTokenTypes(t) {
     return () => {
@@ -9,7 +9,7 @@ function expectTokenTypes(t) {
         let i = 0;
 
         for (; i < token_types.length && !sc.halted; i++) {
-            assert.equal(sc.next().val.token_type, token_types[i]);
+            assert.equal(sc.next().token_type, token_types[i]);
         }
     };
 }
@@ -27,9 +27,9 @@ const et2 = [
 ];
 
 const et3 = [
-    "map<vec<num>> -10.12",
-    [TokenType.MAP, TokenType.LT, TokenType.VEC, TokenType.LT, TokenType.NUM,
-     TokenType.GT, TokenType.GT, TokenType.MIN, TokenType.NMV, TokenType.EOF]
+    "(num) -> num -10.12",
+    [TokenType.LPN, TokenType.NUM, TokenType.RPN, TokenType.ARR, TokenType.NUM,
+     TokenType.MIN, TokenType.NMV, TokenType.EOF]
 ];
 
 const et4 = [
@@ -74,17 +74,17 @@ function expectFailure(data) {
         let sc = new JQLScanner(data);
 
         // We expect this will never return the EOF token.
-
-        while (true) {
-            let t = sc.next();
-            if (!t.successful) {
+        try {
+            while (sc.next().token_type != TokenType.EOF);
+        } catch (err) {
+            if (err instanceof JQLSyntaxError) {
                 return;
             }
 
-            if (t.val.token_type == TokenType.EOF) {
-                throw new Error("Data successfully parsed.")
-            }
+            throw err;
         }
+
+        throw new Error("Data successfully parsed.");
     };
 }
 
