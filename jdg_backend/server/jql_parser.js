@@ -26,7 +26,7 @@ class JQLParser {
             throw new JQLParseError(0, "Parser has been halted.")
         }
 
-        return this.#Program();
+        return this.#program(true);
     }
 
     #error(msg) {
@@ -34,12 +34,9 @@ class JQLParser {
         throw new JQLParseError(this.#sc.line, msg);
     }
 
-    #Expect(token_type, msg) {
-        this.#sc.next();
-        this.#expect(token_type, msg);
-    }
+    #expect(token_type, msg, advance = false) {
+        if (advance) this.#sc.next();
 
-    #expect(token_type, msg) {
         let token = this.#sc.curr;
 
         if (token.token_type != token_type) {
@@ -55,20 +52,17 @@ class JQLParser {
     // (That is the current lookahead will be overwritten)
     // Lowercase letters denote that the current lookahead will be used.
 
-    #Program() {
-        this.#sc.next();
-        return this.#program();
-    }
+    #program(advance = false) {
+        if (advance) this.#sc.next();
 
-    #program() {
         let lines = FList.EMPTY;
         while (true) {
             switch (this.#sc.curr.token_type) {
                 case TokenType.DO:
-                    lines = FList.cons(new TreeTypes.Statment(this.#Expression()), lines);
+                    lines = FList.cons(new TreeTypes.Statment(this.#expression(true)), lines);
                     break;
                 case TokenType.DEF:
-                    lines = FList.cons(this.#VarDefine(), lines);
+                    lines = FList.cons(this.#varDefine(true), lines);
                     break;
                 case TokenType.EOF:
                     return new TreeTypes.Program(lines.reverse());
@@ -78,16 +72,13 @@ class JQLParser {
         }
     }
 
-    #VarDefine() {
-        this.#sc.next();
-        return this.#varDefine();
-    }
+    #varDefine(advance = false) {
+        if (advance) this.#sc.next();
 
-    #varDefine() {
         let ts = this.#typeSig();
         let id_tok = this.#expect(TokenType.VID, "Define statement missing ID.");
-        this.#Expect(TokenType.AS, "Define statement missing \"as\' token.");
-        let exp = this.#Expression();
+        this.#expect(TokenType.AS, "Define statement missing \"as\' token.", true);
+        let exp = this.#expression(true);
 
         return new TreeTypes.VarDefine(
             new TreeTypes.Argument(ts, new TreeTypes.Identifier(id_tok.lexeme)),
@@ -95,17 +86,14 @@ class JQLParser {
         );
     }
 
-    #TypeSig() {
-        this.#sc.next();
-        return this.#typeSig();
-    }
+    #typeSig(advance = false) {
+        if (advance) this.#sc.next();
 
-    #typeSig() {
         let lah = this.#sc.curr;
 
         switch (lah.token_type) {
             case TokenType.LBR:
-                let vecTS = this.#TypeSig();
+                let vecTS = this.#typeSig(true);
                 this.#expect(TokenType.RBR, "Vector type signature not enclosed.")
 
                 this.#sc.next() // Advance.
@@ -118,24 +106,15 @@ class JQLParser {
                 if (lah.token_type != TokenType.RPN) {
                     input_types = FList.cons(this.#typeSig(), input_types);
 
-                    while (true) {
-                        lah = this.#sc.curr;
-
-                        if (lah.token_type == TokenType.RPN) {
-                            break;
-                        }
-
-                        if (lah.token_type != TokenType.COM) {
-                            this.#error("Invalid map type input list.");
-                        }
-
-                        input_types = FList.cons(this.#TypeSig(), input_types);
+                    while (this.#sc.curr.token_type != TokenType.RPN) {
+                        this.#expect(TokenType.COM, "Invalid map type input list.")
+                        input_types = FList.cons(this.#typeSig(true), input_types);
                     }
                 }
 
-                this.#Expect(TokenType.ARR, "\"->\" token missing from map type signature.");
+                this.#expect(TokenType.ARR, "\"->\" token missing from map type signature.", true);
 
-                return TreeTypes.TypeSig.typeMap(input_types.reverse(), this.#TypeSig());
+                return TreeTypes.TypeSig.typeMap(input_types.reverse(), this.#typeSig(true));
             case TokenType.NUM:
                 this.#sc.next(); // Advance.
                 return TreeTypes.TypeSig.NUM;
@@ -153,31 +132,24 @@ class JQLParser {
         }
     }
 
-    #Expression() {
-        this.#sc.next();
-        return this.#expresssion();
-    }
+    #expression(advance = false) {
+        if (advance) this.#sc.next();
 
-    #expresssion() {
         // Match, Map, or ORR
         let lah = this.#sc.curr;
         switch (lah.token_type) {
             case TokenType.MAT:
-                return this.#Match();
+                return this.#match(true);
             case TokenType.MAP:
-                return this.#Map();
+                return this.#map(true);
             default:
                 return this.#or();
         }
     }
 
-    // Assumes match keyword has already been read.
-    #Match() {
-        this.#sc.next();
-        return this.#match();
-    }
+    #match(advance = false) {
+        if (advance) this.#sc.next();
 
-    #match() {
         let lah = this.#sc.curr;
         let headed_match = false;
         let head = null;
@@ -185,7 +157,7 @@ class JQLParser {
         if (lah.token_type != TokenType.CAS && 
                 lah.token_type != TokenType.DFT) {
             headed_match = true;
-            head = this.#expresssion();
+            head = this.#expression();
         }
 
         let cases = FList.EMPTY;
@@ -194,29 +166,26 @@ class JQLParser {
             lah = this.#sc.curr;
 
             if (lah.token_type == TokenType.CAS) {
-                let test = this.#Expression();
+                let test = this.#expression(true);
                 this.#expect(TokenType.ARR, "Arrow not found in case statment.");
-                let conseq = this.#Expression();
+                let conseq = this.#expression(true);
 
                 cases = FList.cons(new TreeTypes.Case(test, conseq), cases);
             } else if (lah.token_type == TokenType.DFT) {
-                this.#Expect(TokenType.ARR, "Arrow not found in default statement.")
+                this.#expect(TokenType.ARR, "Arrow not found in default statement.", true)
                 return headed_match 
-                    ? TreeTypes.Match.valueMatch(head, cases.reverse(), this.#Expression()) 
-                    : TreeTypes.Match.defaultMatch(cases.reverse(), this.#Expression());
+                    ? TreeTypes.Match.valueMatch(head, cases.reverse(), this.#expression(true)) 
+                    : TreeTypes.Match.defaultMatch(cases.reverse(), this.#expression(true));
             } else {
                 this.#error("Unexpected token in match statement.");
             }
         }
     }
 
-    // Assumes map keyword has already been read.
-    #Map() {
-        this.#sc.next();
-        return this.#map();
-    }
+    // Assumes map has already been read.
+    #map(advance = false) {
+        if (advance) this.#sc.next();
 
-    #map() {
         this.#expect(TokenType.LPN, "Map does not have argument list.");
         let args = FList.EMPTY;
 
@@ -236,7 +205,7 @@ class JQLParser {
                 
                 args = FList.cons(
                     new TreeTypes.Argument(
-                        this.#TypeSig(),
+                        this.#typeSig(true),
                         new TreeTypes.Identifier(
                             this.#expect(TokenType.VID, "ID expected after argument type.").lexeme
                         )
@@ -246,35 +215,186 @@ class JQLParser {
             }
         }
 
-        this.#Expect(TokenType.ARR, "Arrow expected after argument list in map.");
+        this.#expect(TokenType.ARR, "Arrow expected after argument list in map.", true);
         
         let defines = FList.EMPTY;
         this.#sc.next();    // Advance past arrow.
 
         while (this.#sc.curr.token_type == TokenType.DEF) {
             defines = FList.cons(
-                this.#VarDefine(),
+                this.#varDefine(true),
                 defines
             );
         }
 
-        return new TreeTypes.Map(args.reverse(), defines.reverse(), this.#expresssion());
+        return new TreeTypes.Map(args.reverse(), defines.reverse(), this.#expression());
     }
 
-    #Or() {
-        this.#sc.next();
-        return this.#or();
+    #or(advance = false) {
+        if (advance) this.#sc.next();
+
+        let head = this.#and();
+        let orOps = FList.cons(head, FList.EMPTY);
+
+        while (this.#sc.curr.token_type == TokenType.OR) {
+            orOps = FList.cons(this.#and(true), orOps);
+        }
+
+        return orOps.tail.isEmpty
+            ? head 
+            : TreeTypes.BooleanChain.orChain(orOps.reverse());
     }
 
-    #or() {
+    #and(advance = false) {
+        if (advance) this.#sc.next();
+
+        let head = this.#not();
+        let andOps = FList.cons(head, FList.EMPTY);
+
+        while (this.#sc.curr.token_type == TokenType.AND) {
+            andOps = FList.cons(this.#not(true), andOps);
+        }
+
+        return andOps.tail.isEmpty
+            ? head 
+            : TreeTypes.BooleanChain.andChain(andOps.reverse());
+    }
+
+    #not(advance = false) {
+        if (advance) this.#sc.next();
+
+        return this.#sc.curr.token_type == TokenType.NOT 
+            ? new TreeTypes.Not(this.#compare(true)) 
+            : this.#compare();
+    }
+
+    #compare(advance = false) {
+        if (advance) this.#sc.next();
+
+        let lsum = this.#sum();
+
+        switch (this.#sc.curr.token_type) {
+            case TokenType.EQU:
+                return TreeTypes.Comparison.equals(lsum, this.#sum(true));
+            case TokenType.LTE:
+                return TreeTypes.Comparison.ltEquals(lsum, this.#sum(true));
+            case TokenType.GTE:
+                return TreeTypes.Comparison.gtEquals(lsum, this.#sum(true));
+            case TokenType.LT:
+                return TreeTypes.Comparison.lt(lsum, this.#sum(true));
+            case TokenType.GT:
+                return TreeTypes.Comparison.gt(lsum, this.#sum(true));
+            default:
+                return lsum;
+        }
+    }
+
+    #sum(advance = false) {
+        if (advance) this.#sc.next();
+
+        let head = this.#product();
+        let ops = FList.EMPTY;
+
+        while (true) {
+            switch (this.#sc.curr.token_type) {
+                case TokenType.PLS:
+                    ops = FList.cons(
+                        TreeTypes.OpChainTerm.add(this.#product(true)), 
+                        ops
+                    );
+                    break;
+                case TokenType.MIN:
+                    ops = FList.cons(
+                        TreeTypes.OpChainTerm.sub(this.#product(true)), 
+                        ops
+                    );
+                    break;
+                default:
+                    return ops.isEmpty 
+                        ? head 
+                        : new TreeTypes.OpChain(head, ops.reverse());
+            }
+        }
+    }
+
+    #product(advance = false) {
+        if (advance) this.#sc.next();
+
+        let head = this.#negation();
+        let ops = FList.EMPTY;
+
+        while (true) {
+            switch (this.#sc.curr.token_type) {
+                case TokenType.TIM:
+                    ops = FList.cons(
+                        TreeTypes.OpChainTerm.times(this.#negation(true)),
+                        ops
+                    );
+                    break;
+                case TokenType.DIV:
+                    ops = FList.cons(
+                        TreeTypes.OpChainTerm.div(this.#negation(true)),
+                        ops
+                    );
+                    break;
+                case TokenType.MOD:
+                    ops = FList.cons(
+                        TreeTypes.OpChainTerm.mod(this.#negation(true)),
+                        ops
+                    );
+                    break;
+                default:
+                    return ops.isEmpty 
+                        ? head 
+                        : new TreeTypes.OpChain(head, ops.reverse());
+            }
+        }
+    }
+
+    #negation(advance = false) {
+        if (advance) this.#sc.next();
+
+        return this.#sc.curr.token_type == TokenType.MIN 
+            ? new TreeTypes.Negation(this.#term(true))
+            : this.#term();
+    }
+
+    #term(advance = false) {
+        if (advance) this.#sc.next();
+
+        let lah = this.#sc.curr;
+
+        switch (lah.token_type) {
+            case TokenType.BLV:
+                this.#sc.next();
+                return lah == Token.T_TRU 
+                    ? TreeTypes.PrimitiveValue.TRUE 
+                    : TreeTypes.PrimitiveValue.FALSE;
+            case TokenType.NMV:
+                this.#sc.next();
+                return TreeTypes.PrimitiveValue.numVal(
+                    parseFloat(lah.lexeme)
+                );
+            case TokenType.STV:
+                this.#sc.next();
+                return TreeTypes.PrimitiveValue.stringVal(
+                    lah.lexeme.substring(1, lah.lexeme.length - 1)
+                );
+            default:
+                return this.#application();
+        }
+    }
+
+    #application(advance = false) {
+        if (advance) this.#sc.next();
+
         this.#sc.next();
-        return TreeTypes.BooleanChain.orChain(FList.of("1", "2"));
+        return new TreeTypes.Identifier("F");
     }
 }
 
 var pr = `
-do match case 1 -> 3 default -> map (num x) -> define num y as 3 y
-define num x as map (num z) -> z
+do "asf"
 `
 
 console.log((new JQLParser(pr)).parse().toString());
