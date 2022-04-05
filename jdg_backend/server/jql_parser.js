@@ -43,7 +43,9 @@ class JQLParser {
         let token = this.#sc.curr;
 
         if (token.token_type != token_type) {
-            this.#error(msg + " " + token.token_type.toString());
+            let mismatch_str = 
+                `Expected : ${token_type.toString()}, Found : ${token.token_type.toString()}`;
+            this.#error(mismatch_str + "\n" + msg);
         }
 
         return token;
@@ -60,14 +62,14 @@ class JQLParser {
 
     #program() {
         let lines = FList.EMPTY;
-        let lah = this.#sc.curr;
-
         while (true) {
-            switch (lah.token_type) {
+            switch (this.#sc.curr.token_type) {
                 case TokenType.DO:
                     lines = FList.cons(new TreeTypes.Statment(this.#Expression()), lines);
+                    break;
                 case TokenType.DEF:
                     lines = FList.cons(this.#VarDefine(), lines);
+                    break;
                 case TokenType.EOF:
                     return new TreeTypes.Program(lines.reverse());
                 default:
@@ -83,7 +85,7 @@ class JQLParser {
 
     #varDefine() {
         let ts = this.#typeSig();
-        let id_tok = this.#expect(TokenType.VID, "Define statement missing identifier.");
+        let id_tok = this.#expect(TokenType.VID, "Define statement missing ID.");
         this.#Expect(TokenType.AS, "Define statement missing \"as\' token.");
         let exp = this.#Expression();
 
@@ -198,9 +200,10 @@ class JQLParser {
 
                 cases = FList.cons(new TreeTypes.Case(test, conseq), cases);
             } else if (lah.token_type == TokenType.DFT) {
+                this.#Expect(TokenType.ARR, "Arrow not found in default statement.")
                 return headed_match 
-                    ? TreeTypes.Match.valueMatch(head, cases, this.#Expression()) 
-                    : TreeTypes.Match.defaultMatch(cases, this.#Expression());
+                    ? TreeTypes.Match.valueMatch(head, cases.reverse(), this.#Expression()) 
+                    : TreeTypes.Match.defaultMatch(cases.reverse(), this.#Expression());
             } else {
                 this.#error("Unexpected token in match statement.");
             }
@@ -210,10 +213,52 @@ class JQLParser {
     // Assumes map keyword has already been read.
     #Map() {
         this.#sc.next();
-        return TreeTypes.BooleanChain.orChain(FList.of("5", "6"));
+        return this.#map();
     }
 
     #map() {
+        this.#expect(TokenType.LPN, "Map does not have argument list.");
+        let args = FList.EMPTY;
+
+        if (this.#sc.next().token_type != TokenType.RPN) {
+            args = FList.cons(
+                new TreeTypes.Argument(
+                    this.#typeSig(), 
+                    new TreeTypes.Identifier(
+                        this.#expect(TokenType.VID, "ID expected after argument type.").lexeme
+                    )
+                ),
+                args
+            );
+
+            while (this.#sc.next().token_type != TokenType.RPN) {
+                this.#expect(TokenType.COM, "Expected comma in argument list.")
+                
+                args = FList.cons(
+                    new TreeTypes.Argument(
+                        this.#TypeSig(),
+                        new TreeTypes.Identifier(
+                            this.#expect(TokenType.VID, "ID expected after argument type.").lexeme
+                        )
+                    ),
+                    args
+                );
+            }
+        }
+
+        this.#Expect(TokenType.ARR, "Arrow expected after argument list in map.");
+        
+        let defines = FList.EMPTY;
+        this.#sc.next();    // Advance past arrow.
+
+        while (this.#sc.curr.token_type == TokenType.DEF) {
+            defines = FList.cons(
+                this.#VarDefine(),
+                defines
+            );
+        }
+
+        return new TreeTypes.Map(args.reverse(), defines.reverse(), this.#expresssion());
     }
 
     #Or() {
@@ -228,9 +273,8 @@ class JQLParser {
 }
 
 var pr = `
-define ([num],str)->[(num) -> num] a as 
-    match 
-        default 1
+do match case 1 -> 3 default -> map (num x) -> define num y as 3 y
+define num x as map (num z) -> z
 `
 
 console.log((new JQLParser(pr)).parse().toString());

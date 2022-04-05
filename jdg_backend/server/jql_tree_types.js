@@ -1,6 +1,18 @@
 const {Token, TokenType, JQLScanner} = require("./jql_scanner");
 const {FList, Try} = require("./utils");
 
+const INDENT = "  ";
+
+function checkIndent(str) {
+    if (str.indexOf("\n") == -1) {
+        return str;
+    }
+
+    return "\n" + INDENT + str.replace(
+        /\n/g, "\n" + INDENT
+    );
+}
+
 class Program {
     // FList<Statement | VarDefine>
     #stmts;
@@ -14,12 +26,7 @@ class Program {
     }
 
     toString() {
-        return this.#stmts.map(s => s.toString()).match(
-            (head, tail) => tail.foldl(head.toString(), 
-                (res, ele) => res + ele.toString() + "\n"
-            ),
-            () => "" 
-        );
+        return this.#stmts.foldl("", (res, ele) => res + "\n" + ele.toString() + "\n");
     }
 }
 
@@ -36,7 +43,7 @@ class Statment {
     }
 
     toString() {
-        return "do " + this.#exp.toString();
+        return "do " + checkIndent(this.#exp.toString());
     }
 }
 
@@ -61,7 +68,7 @@ class VarDefine {
     }
 
     toString() {
-        return `define ${this.arg.toString()} as ${this.#exp.toString()}`;
+        return `define ${this.arg.toString()} as ${checkIndent(this.#exp.toString())}`;
     }
 }
 
@@ -85,7 +92,8 @@ class Case {
     }
 
     toString() {
-        return "case " + this.test.toString() + " -> " + this.conseq.toString();
+        return "case " + checkIndent(this.test.toString()) + "\n-> " + 
+            checkIndent(this.conseq.toString());
     }
 }
 
@@ -126,7 +134,7 @@ class Match {
             return "match" + 
                     this.#cases.foldl("", 
                         (res, ele) => res + "\n" + ele.toString()) + 
-                    "\ndefault " + this.#defaultCase.toString()
+                    "\ndefault\n-> " + checkIndent(this.#defaultCase.toString());
         }
     };
 
@@ -147,7 +155,7 @@ class Match {
             return "match " + this.#pivot.toString() + 
                 this.cases.foldl("", 
                     (res, ele) => res + "\n" + ele.toString()) + 
-                "\ndefault " + this.defaultCase.toString()
+                "\ndefault\n-> " + checkIndent(this.defaultCase.toString());
         }
     }
 }
@@ -206,10 +214,17 @@ class Map {
     }
 
     toString() {
-        type_strs = this.#args.map(a => a.toString()).join(", ");
-        def_strs = this.vdfs.map(vdf => vdf.toString()).join("\n");
+        let type_strs = this.#args.match(
+            (head, tail) => tail.foldl(head.toString(), 
+                (res, ele) => res + ", " + ele.toString()),
+            () => ""
+        );
 
-        return `(${type_strs}) -> \n${def_strs}\n${this.#exp.toString()}`;
+        let body_str = this.#vdfs.foldl("", 
+            (res, ele) => res + ele.toString() + "\n"
+        ) + this.#exp.toString();
+
+        return `map (${type_strs}) -> ${checkIndent(body_str)}`;
     }
 }
 
