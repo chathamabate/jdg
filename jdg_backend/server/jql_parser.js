@@ -45,6 +45,9 @@ class JQLParser {
             this.#error(mismatch_str + "\n" + msg);
         }
 
+        // Throw out expected token from scanner.
+        this.#sc.next();
+
         return token;
     }
 
@@ -64,6 +67,9 @@ class JQLParser {
                 case TokenType.DEF:
                     lines = FList.cons(this.#varDefine(true), lines);
                     break;
+                case TokenType.TYP:
+                    lines = FList.cons(this.#typeDef(true), lines);
+                    break;
                 case TokenType.EOF:
                     return new TreeTypes.Program(lines.reverse());
                 default:
@@ -77,13 +83,23 @@ class JQLParser {
 
         let ts = this.#typeSig();
         let id_tok = this.#expect(TokenType.VID, "Define statement missing ID.");
-        this.#expect(TokenType.AS, "Define statement missing \"as\' token.", true);
-        let exp = this.#expression(true);
+        this.#expect(TokenType.AS, "Define statement missing \"as\' token.");
+        let exp = this.#expression();
 
         return new TreeTypes.VarDefine(
             new TreeTypes.Argument(ts, new TreeTypes.Identifier(id_tok.lexeme)),
             exp
         );
+    }
+
+    #typeDef(advance = false) {
+        if (advance) this.#sc.next();
+
+        let vid_t = this.#expect(TokenType.VID, "ID missing from type definition.");
+        this.#expect(TokenType.AS, "\"as\" missing from type definition.");
+        let ts = this.#typeSig();
+
+        return new TreeTypes.TypeDef(new TreeTypes.Identifier(vid_t.lexeme), ts);
     }
 
     #typeSig(advance = false) {
@@ -95,26 +111,27 @@ class JQLParser {
             case TokenType.LBR:
                 let vecTS = this.#typeSig(true);
                 this.#expect(TokenType.RBR, "Vector type signature not enclosed.")
-
-                this.#sc.next() // Advance.
-
                 return TreeTypes.TypeSig.typeVec(vecTS);
             case TokenType.LPN:
-                let input_types = FList.EMPTY;
-
-                lah = this.#sc.next();
-                if (lah.token_type != TokenType.RPN) {
-                    input_types = FList.cons(this.#typeSig(), input_types);
-
-                    while (this.#sc.curr.token_type != TokenType.RPN) {
-                        this.#expect(TokenType.COM, "Invalid map type input list.")
-                        input_types = FList.cons(this.#typeSig(true), input_types);
-                    }
+                let arg_types = FList.EMPTY;
+                
+                if (this.#sc.next().token_type != TokenType.RPN) {
+                    arg_types = this.#typeList();
                 }
 
-                this.#expect(TokenType.ARR, "\"->\" token missing from map type signature.", true);
+                this.#expect(TokenType.RPN, "Argument types should be followed by \")\".")
+                this.#expect(TokenType.ARR, "\"->\" token missing from map type signature.");
 
-                return TreeTypes.TypeSig.typeMap(input_types.reverse(), this.#typeSig(true));
+                return TreeTypes.TypeSig.typeMap(arg_types.reverse(), this.#typeSig());
+            case TokenType.LCB:
+                let field_types = FList.EMPTY;
+
+                if (this.#sc.next().token_type != TokenType.RCB) {
+                    field_types = this.#typeList();
+                }
+                
+                this.#expect(TokenType.RCB, "Field types should be followed by \"}\".")
+                return TreeTypes.TypeSig.typeStruct(field_types);
             case TokenType.NUM:
                 this.#sc.next(); // Advance.
                 return TreeTypes.TypeSig.NUM;
@@ -130,6 +147,18 @@ class JQLParser {
             default:
                 this.#error("Cannot parse type signature.")
         }
+    }
+
+    #typeList(advance = false) {
+        if (advance) this.#sc.next();
+
+        let tsl = FList.cons(this.#typeSig(), FList.EMPTY);
+
+        while (this.#sc.curr.token_type == TokenType.COM) {
+            tsl = FList.cons(this.#typeSig(true), tsl);
+        }
+
+        return tsl;
     }
 
     #expression(advance = false) {
@@ -162,24 +191,19 @@ class JQLParser {
 
         let cases = FList.EMPTY;
 
-        while (true) {
-            lah = this.#sc.curr;
-
-            if (lah.token_type == TokenType.CAS) {
-                let test = this.#expression(true);
-                this.#expect(TokenType.ARR, "Arrow not found in case statment.");
-                let conseq = this.#expression(true);
-
-                cases = FList.cons(new TreeTypes.Case(test, conseq), cases);
-            } else if (lah.token_type == TokenType.DFT) {
-                this.#expect(TokenType.ARR, "Arrow not found in default statement.", true)
-                return headed_match 
-                    ? TreeTypes.Match.valueMatch(head, cases.reverse(), this.#expression(true)) 
-                    : TreeTypes.Match.defaultMatch(cases.reverse(), this.#expression(true));
-            } else {
-                this.#error("Unexpected token in match statement.");
-            }
+        while (this.#sc.curr.token_type != TokenType.DFT) {
+            this.#expect(TokenType.CAS, "Case statement expected.");
+            let test = this.#expression();
+            this.#expect(TokenType.ARR, "Arrow not found in case statment.");
+            let conseq = this.#expression();
+            cases = FList.cons(new TreeTypes.Case(test, conseq), cases);
         }
+
+        // If we are here, we know the DFT has been found.
+        this.#expect(TokenType.ARR, "Arrow not found in default case.", true);
+        return headed_match 
+            ? TreeTypes.Match.valueMatch(head, cases.reverse(), this.#expression()) 
+            : TreeTypes.Match.defaultMatch(cases.reverse(), this.#expression());
     }
 
     // Assumes map has already been read.
@@ -189,36 +213,21 @@ class JQLParser {
         this.#expect(TokenType.LPN, "Map does not have argument list.");
         let args = FList.EMPTY;
 
-        if (this.#sc.next().token_type != TokenType.RPN) {
-            args = FList.cons(
-                new TreeTypes.Argument(
-                    this.#typeSig(), 
-                    new TreeTypes.Identifier(
-                        this.#expect(TokenType.VID, "ID expected after argument type.").lexeme
-                    )
-                ),
-                args
-            );
+        if (this.#sc.curr.token_type != TokenType.RPN) {
+            args = FList.cons(this.#arg(), FList.EMPTY);
 
-            while (this.#sc.next().token_type != TokenType.RPN) {
+            while (this.#sc.curr.token_type != TokenType.RPN) {
                 this.#expect(TokenType.COM, "Expected comma in argument list.")
-                
-                args = FList.cons(
-                    new TreeTypes.Argument(
-                        this.#typeSig(true),
-                        new TreeTypes.Identifier(
-                            this.#expect(TokenType.VID, "ID expected after argument type.").lexeme
-                        )
-                    ),
-                    args
-                );
+                args = FList.cons(this.#arg(), args);
             }
         }
+
+        // We only make it here if an RPN has been found.
+        // Thus, no need to check for it here. Just skip to arrow.
 
         this.#expect(TokenType.ARR, "Arrow expected after argument list in map.", true);
         
         let defines = FList.EMPTY;
-        this.#sc.next();    // Advance past arrow.
 
         while (this.#sc.curr.token_type == TokenType.DEF) {
             defines = FList.cons(
@@ -228,6 +237,15 @@ class JQLParser {
         }
 
         return new TreeTypes.Map(args.reverse(), defines.reverse(), this.#expression());
+    }
+
+    #arg(advance = false) {
+        if (advance) this.#sc.next();
+
+        let ts = this.#typeSig();
+        let vid_t = this.#expect(TokenType.VID, "Argument expects ID.");
+
+        return new TreeTypes.Argument(ts, new TreeTypes.Identifier(vid_t.lexeme));
     }
 
     #or(advance = false) {
@@ -388,13 +406,81 @@ class JQLParser {
     #application(advance = false) {
         if (advance) this.#sc.next();
 
-        this.#sc.next();
-        return new TreeTypes.Identifier("F");
+        let pivot = this.#addressable();
+        let sss = FList.EMPTY;
+
+        while (true) {
+            switch (this.#sc.curr.token_type) {
+                case TokenType.LBR:
+                    // Index required here.
+                    let index = this.#expression(true);
+                    this.#expect(TokenType.RBR, "Index must be enclosed by \"]\"");
+                    sss = FList.cons(new TreeTypes.Index(index), sss);
+                    break;
+                case TokenType.LPN:
+                    let args = FList.EMPTY;
+                    if (this.#sc.next().token_type != TokenType.RPN) {
+                        args = this.#expList();
+                    }
+                    this.#expect(TokenType.RPN, "Argument list must be followed by \")\".");
+                    sss = FList.cons(new TreeTypes.ArgList(args), sss);
+                    break;
+                case TokenType.STI:
+                    sss = FList.cons(new TreeTypes.StaticIndex(parseInt(
+                        this.#sc.curr.lexeme.substring(1) // Cut off period.
+                    )), sss);
+                    this.#sc.next(); // Advance past index.
+                    break;
+                default:
+                    return sss.isEmpty 
+                        ? pivot
+                        : new TreeTypes.SubScript(pivot, sss.reverse());
+            }
+        }
     }
+
+    #addressable(advance = false) {
+        if (advance) this.#sc.next();
+        
+        switch (this.#sc.curr.token_type) {
+            case TokenType.VID:
+                let vid_t = this.#sc.curr;
+                this.#sc.next(); // Advance past ID.
+                return new TreeTypes.Identifier(vid_t.lexeme);
+            case TokenType.LCB:
+                let fields = FList.EMPTY;
+                if (this.#sc.next().token_type != TokenType.RCB) {
+                    fields = this.#expList();
+                }
+                this.#expect(TokenType.RCB, "Struct value must be followed by \"}\".");
+                return new TreeTypes.Struct(fields.reverse());
+            case TokenType.LBR:
+                let cells = FList.EMPTY;
+                if (this.#sc.next().token_type != TokenType.RBR) {
+                    cells = this.#expList();
+                }
+                this.#expect(TokenType.RBR, "Vector value must be followed by \"]\".");
+                return new TreeTypes.Vector(cells.reverse());
+            case TokenType.LPN:
+                let exp = this.#expression(true);
+                this.#expect(TokenType.RPN, "Grouping must be followed by \")\"");
+                return new TreeTypes.Grouping(exp);
+            default:
+                this.#error("Unable to parse addressable value.");
+        }
+    }
+
+    #expList(advance = false) {
+        if (advance) this.#sc.next();
+
+        let elist = FList.cons(this.#expression(), FList.EMPTY);
+
+        while (this.#sc.curr.token_type == TokenType.COM) {
+            elist = FList.cons(this.#expression(true), elist);
+        }
+
+        return elist;
+    } 
 }
 
-var pr = `
-do "asf"
-`
-
-console.log((new JQLParser(pr)).parse().toString());
+module.exports.JQLParser = JQLParser;

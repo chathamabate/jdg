@@ -67,7 +67,7 @@ Left recursive fold operation.
         | <STC>
         | <VEC>
         | \(  <EXP> \)
-<AGL> ::= \( (<EXP> (, <EXP>)*)?  \)    // Arg List
+<AGL> ::= \( (<EXL>)?  \)    // Arg List
 <IND> ::= \[ <EXP> \]                   // Index.
 <STI> ::= \.(0|[1-9][0-9]*)             // Static Index for structs.
 <VID> ::= [a-zA-Z_][a-zA-Z0-9_]* 
