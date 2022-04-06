@@ -50,6 +50,7 @@ Left recursive fold operation.
 <PRG> ::= (<VDF> | <STM>)* <EOF>
 <STM> ::= do <EXP>
 <VDF> ::= define <GTP> <VID> as <EXP>
+<TDF> ::= type <VID> as <GTP>       // Typedef
 <EXP> ::= <MAP> | <MAT> | <ORR>
 <MAP> ::= map \( (<GTP> <VID> (, <GTP> <VID>)*)? \) -> (<VDF>)* <EXP>
 <MAT> ::= match (<EXP>)? (case <EXP> -> <EXP>)* default -> <EXP> 
@@ -60,22 +61,29 @@ Left recursive fold operation.
 <SUM> ::= <PRD> ((+|-) <PRD>)*
 <PRD> ::= <NEG> ((\*|/|%) <NEG>)*
 <NEG> ::= (-)? <APP>
-<APP> ::= <ADR> ( <IND> | <AGL> )*
+<APP> ::= <ADR> ( <IND> | <AGL> | <STI>)*
         | <BLV> | <NMV> | <STV>
 <ADR> ::= <VID>              // Something which is indexable or callable.
+        | <STC>
         | <VEC>
+        | <STC>
         | \(  <EXP> \)
-<AGL> ::= \( (<EXP> (, <EXP>)*)?  \)
-<IND> ::= \[ <EXP> \]
+<AGL> ::= \( (<EXP> (, <EXP>)*)?  \)    // Arg List
+<IND> ::= \[ <EXP> \]                   // Index.
+<STI> ::= \.(0|[1-9][0-9]*)             // Static Index for structs.
 <VID> ::= [a-zA-Z_][a-zA-Z0-9_]* 
-<VEC> ::= \[ (<EXP> (, <EXP>)*)? \]
+<VEC> ::= \[ (<EXL>)? \]
+<STC> ::= \{ (<EXL>)? \}
+<EXL> ::= <EXP> (, <EXP>)*              // Expresssion List.
 <BLV> ::= true | false
 <NMV> ::= ([1-9][0-9]*|0)(\.[0-9]+)?
 <STV> ::= "[^"\n]*"
 <GTP> ::= \[ <GTP> \]
-        | \( (<GTP> (, <GTP>)*)?  \) -> <GTP>
+        | \( (<TPL>)?  \) -> <GTP>
+        | \{ (<TPL>)? \}    // Struct type.
         | <PTP>
         | <VID>
+<TPL> ::= <GTP> (, <GTP>)*  // Type list.
 <PTP> ::= num | bool | str
 
 // List of tokens derrived from above grammar.
