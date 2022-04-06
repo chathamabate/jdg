@@ -69,7 +69,7 @@ const ets = [
     et1, et2, et3, et4, et5, et6, et7, et8, et9
 ];
 
-describe("Expected Tests", () => {
+describe("Scanner Success Tests", () => {
     for (let i = 0; i < ets.length; i++) {
         it("ET " + (i + 1), expectTokenTypes(ets[i]));
     }
@@ -98,7 +98,7 @@ const efs = [
     "1.", "..1", "\"hello World00", "\"\"\"", "$$$"
 ];
 
-describe("Failure Tests", () => {
+describe("Scanner Failure Tests", () => {
     for (let i =  0; i < efs.length; i++) {
         it("FT " + (i + 1), expectFailure(efs[i]));
     }

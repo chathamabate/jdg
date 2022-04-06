@@ -131,7 +131,7 @@ class JQLParser {
                 }
                 
                 this.#expect(TokenType.RCB, "Field types should be followed by \"}\".")
-                return TreeTypes.TypeSig.typeStruct(field_types);
+                return TreeTypes.TypeSig.typeStruct(field_types.reverse());
             case TokenType.NUM:
                 this.#sc.next(); // Advance.
                 return TreeTypes.TypeSig.NUM;
@@ -423,7 +423,7 @@ class JQLParser {
                         args = this.#expList();
                     }
                     this.#expect(TokenType.RPN, "Argument list must be followed by \")\".");
-                    sss = FList.cons(new TreeTypes.ArgList(args), sss);
+                    sss = FList.cons(new TreeTypes.ArgList(args.reverse()), sss);
                     break;
                 case TokenType.STI:
                     sss = FList.cons(new TreeTypes.StaticIndex(parseInt(
@@ -484,3 +484,4 @@ class JQLParser {
 }
 
 module.exports.JQLParser = JQLParser;
+module.exports.JQLParseError = JQLParseError;
