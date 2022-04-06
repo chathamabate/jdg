@@ -72,6 +72,30 @@ class VarDefine {
     }
 }
 
+class TypeDef {
+    // Identifier.
+    #vid; 
+
+    // Type.
+    #ts;
+
+    constructor(vid, ts) {
+        this.#vid = vid;
+        this.#ts = ts;
+    }
+
+    get vid() {
+        return this.#vid;
+    }
+
+    get ts() {
+        return this.#ts;
+    }
+
+    toString() {
+        return `type ${this.#vid.toString()} as ${this.#ts.toString()}`;
+    }
+}
 
 class Case {
     // Both Match | Map | Or
@@ -560,11 +584,28 @@ class ArgList {
 
     toString() {
         return this.#args.match(
-            (head, tail) => tail.foldl(
+            (head, tail) => "(" + tail.foldl(
                 head.toString(), (res, ele) => res + ", " + ele.toString()
-            ),
+            ) + ")",
             () => "()"  
         );
+    }
+}
+
+class StaticIndex {
+    // Integer.
+    #index;
+
+    constructor(index) {
+        this.#index = index;
+    }
+
+    get index() {
+        return this.#index;
+    }
+
+    toString() {
+        return "." + this.#index;
     }
 }
 
@@ -572,7 +613,7 @@ class SubScript {
     // Grouping | ID | Vec
     #pivot;
 
-    // Nonempty FList<Index | ArgList>
+    // Nonempty FList<Index | ArgList | StaticIndex>
     #subscripts;    
 
     constructor(p, sss) {
@@ -634,6 +675,27 @@ class Vector {
                 ) + "]",
             () => "[]"
         );
+    }
+}
+
+class Struct {
+    // FList<Match | Map | Or>
+    #fields;
+
+    constructor(fields) {
+        this.#fields = fields;
+    }
+
+    get fields() {
+        return this.#fields;
+    }
+
+    toString() {
+        return this.#fields.match(
+            (head, tail) => "{" + tail.foldl(head.toString(), 
+                (res, ele) => res + ", " + ele.toString()) + "}",
+            () => "{}"
+        ); 
     }
 }
 
@@ -736,6 +798,10 @@ class TypeSig {
         return new TypeSig.#TypeMap(its, ot);
     }
 
+    static typeStruct(fts) {
+        return new TypeSig.#TypeStruct(fts);
+    }
+
     static #TypeVec = class {
         // TypeSig | VID
         #innerType;
@@ -777,6 +843,27 @@ class TypeSig {
             );
 
             return `(${inputStr}) -> ${this.#outputType.toString()}`
+        }
+    }
+
+    static #TypeStruct = class {
+        // Flist<type>
+        #fieldTypes;
+
+        constructor(fts) {
+            this.#fieldTypes = fts;
+        }
+
+        get fieldTypes() {
+            return this.#fieldTypes;
+        } 
+
+        toString() {
+            return this.#fieldTypes.match(
+                (head, tail) => "{" + tail.foldl(head.toString(), 
+                    (res, ele) => res + ", " + ele.toString()) + "}",
+                () => "{}"
+            ); 
         }
     }
 }

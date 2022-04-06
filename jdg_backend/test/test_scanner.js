@@ -59,8 +59,14 @@ const et8 = [
     [TokenType.EOF]
 ];
 
+const et9 = [
+    "00.1 .5.623",
+    [TokenType.NMV, TokenType.NMV, TokenType.STI, TokenType.STI, TokenType.EOF]
+];
+
+
 const ets = [
-    et1, et2, et3, et4, et5, et6, et7, et8
+    et1, et2, et3, et4, et5, et6, et7, et8, et9
 ];
 
 describe("Expected Tests", () => {
@@ -84,12 +90,12 @@ function expectFailure(data) {
             throw err;
         }
 
-        throw new Error("Data successfully parsed.");
+        throw new Error("Data successfully scanned.");
     };
 }
 
 const efs = [
-    "1.", ".1", "\"hello World00", "\"\"\"", "$$$"
+    "1.", "..1", "\"hello World00", "\"\"\"", "$$$"
 ];
 
 describe("Failure Tests", () => {

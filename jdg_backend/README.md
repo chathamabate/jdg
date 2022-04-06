@@ -66,7 +66,6 @@ Left recursive fold operation.
 <ADR> ::= <VID>              // Something which is indexable or callable.
         | <STC>
         | <VEC>
-        | <STC>
         | \(  <EXP> \)
 <AGL> ::= \( (<EXP> (, <EXP>)*)?  \)    // Arg List
 <IND> ::= \[ <EXP> \]                   // Index.

@@ -10,6 +10,7 @@ class TokenType {
     static DO = new TokenType("<DO>");
     static AS = new TokenType("<AS>");
     static DEF = new TokenType("<DEF>");
+    static TYP = new TokenType("<TYP>");
     static MAT = new TokenType("<MAT>");
     static CAS = new TokenType("<CAS>");
     static DFT = new TokenType("<DFT>");
@@ -38,6 +39,8 @@ class TokenType {
     static MOD = new TokenType("<MOD>");
     static LBR = new TokenType("<LBR>");
     static RBR = new TokenType("<RBR>");
+    static LCB = new TokenType("<LCB>");
+    static RCB = new TokenType("<RCB>");
 
     static EOF = new TokenType("<EOF>");
 
@@ -46,6 +49,8 @@ class TokenType {
     static BLV = new TokenType("<BLV>");
     static VID = new TokenType("<VID>");
 
+    // static index.
+    static STI = new TokenType("<STI>");
     #name;
 
     constructor(name) {
@@ -65,6 +70,7 @@ class Token {
     static T_DO = new Token("do", TokenType.DO);
     static T_AS = new Token("as", TokenType.AS);
     static T_DEF = new Token("define", TokenType.DEF);
+    static T_TYP = new Token("type", TokenType.TYP);
     static T_MAT = new Token("match", TokenType.MAT);
     static T_CAS = new Token("case", TokenType.CAS);
     static T_DFT = new Token("default", TokenType.DFT);
@@ -85,7 +91,8 @@ class Token {
         Token.T_MAT, Token.T_CAS, Token.T_DFT, 
         Token.T_OR, Token.T_AND, Token.T_NOT,
         Token.T_NUM, Token.T_BUL, Token.T_STR,
-        Token.T_TRU, Token.T_FAL, Token.T_MAP
+        Token.T_TRU, Token.T_FAL, Token.T_MAP,
+        Token.T_TYP
     ];
 
     static T_LPN = new Token("(", TokenType.LPN);
@@ -104,6 +111,8 @@ class Token {
     static T_MOD = new Token("%", TokenType.MOD);
     static T_LBR = new Token("[", TokenType.LBR);
     static T_RBR = new Token("]", TokenType.RBR);
+    static T_LCB = new Token("{", TokenType.LCB);
+    static T_RCB = new Token("}", TokenType.RCB);
 
     static T_EOF = new Token("\\0", TokenType.EOF);
 
@@ -215,6 +224,10 @@ class JQLScanner {
                 return this.#find(Token.T_LBR);
             case "]":
                 return this.#find(Token.T_RBR);
+            case "{":
+                return this.#find(Token.T_LCB);
+            case "}":
+                return this.#find(Token.T_RCB);
             case "-":
                 if (this.#ind == this.#data.length) {
                     return this.#find(Token.T_MIN);
@@ -256,9 +269,26 @@ class JQLScanner {
                 }
 
                 this.#error("String missing closing quote.");
+            case ".": // Static index case.
+                return this.#find(new Token("." + this.#expectInteger(), TokenType.STI));
             default:
                 return this.#nextNumResOrID(c);
         }
+    }
+
+    #expectInteger() {
+        if (this.#data[this.#ind] == "0") {
+            this.#ind++;
+            return "0";
+        }
+
+        let digits = this.#readDigits();
+
+        if (digits.length == 0) {
+            this.#error("Integer expected!");
+        }
+
+        return digits;
     }
 
     #readDigits() {
