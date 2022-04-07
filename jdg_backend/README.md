@@ -2,48 +2,54 @@
 
 A user will be able to query the backend for graphable game data.
 
-## Datatypes
-* `num` a number.
-* `bool` a true of false value.
-* `vec<T>` a sequence of values of type `T`.
-* `map<T1, T2, ... TN, R>` a function which takes `N` inputs and returns `R`.
-* `str` a string of characters.
+## Static Types
+`JQL` is a statically typed language which allows for generic types in certain instances.
 
-## Graphing
-Either a single game's data can be graphed, or data across the entire season can be
-graphed.
+There are 3 primitive `JQL` types.
+* A `num` is a numerical value (can be a decimal).
+* A `str` is a string of characters.
+* A `bool` is a true or false value.
 
-To graph the data of a single game a sequence of 25 numbers is required.
-To graph the data of the entire season, a sequence of numbers with length equal to the number of
-completed games is required.
+There are 3 extensible `JQL` types.
+* A `map` is a function which takes 0 or more inputs and returns a single output.
+* A `vector` is an ordered sequence of values (all the same type).
+* A `struct` is an ordered sequence of values with specified types.
 
-## Global Values
-Here is a list of predefined values always available at runtime.
+Types can be defined by the user using a type definition statment.
+
 ```
-vec<vec<num>> seats
-A table holding the player in each seat of each game.
-Index structure : [game id][seat].
+// Type definition format.
+// type <TypeName> as <RawType>
 
-vec<vec<vec<num>>> bets 
-A table holding the number of tricks bet by each player of each game. 
-Index structure : [game id][seat][round].
-
-vec<vec<vec<num>>> earns
-A table holding the number of tricks earned by each of player of each game.
-Index structure : [game id][seat][round].
+type MyType as num
 ```
 
-## Primitive Functions
-Here is a list of primitive functions with special behavoirs.
+The more complex types are defined in the following manor.
 ```
-map<vec<?>, num> len
-Returns the length of a vector.
+// Map type signature format...
+// (<ArgType1>, <ArgType2> ...) -> <OutputType>
+//
+// Example :
+type BinaryOp as (num, num) -> num
 
-map<vec<T>, map<R, T, R>, R, R> foldl
-Left recursive fold operation. 
+// Vector type signature format...
+// [<ElementType>]
+type NumVector as [num]
+
+// Struct Type signature format...
+// {<FieldType1>, <FieldType2>, ...}
+type Date as {str, num, num}
+```
+Map types also allow for generic types. This is useful in situations where 
+the user wants a function which has arbitrary input or return types.
+```
+// An identifier which is not a defined type or reserved word will be treated as 
+// a generic in type definitions.
+type ArbMap as (T) -> R
 ```
 
 ## Grammar 
+Below are the grammar rules for `JQL`.
 ```
 // Grammar Rules
 
@@ -84,19 +90,6 @@ Left recursive fold operation.
         | <VID>
 <TPL> ::= <GTP> (, <GTP>)*  // Type list.
 <PTP> ::= num | bool | str
-
-// List of tokens derrived from above grammar.
-
-// Reserved Words
-do as define match case default or and not
-vec map num bool str true false
-
-// Symbols
-( ) , -> = <= >= < > + - * % / [ ] 
-
-// Variable Tokens
-<STV> <VID> <NMV>
-
 ```
 
 <!-- ## Single Value Variables
