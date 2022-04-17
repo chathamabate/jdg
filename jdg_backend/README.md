@@ -55,8 +55,8 @@ Below are the grammar rules for `JQL`.
 
 <PRG> ::= (<VDF> | <STM>)* <EOF>
 <STM> ::= do <EXP>
-<VDF> ::= define <TID> as <EXP>
-<TDF> ::= type <TID> as <GTP>       // Typedef
+<VDF> ::= define <GID> as <EXP>
+<TDF> ::= type <GID> as <GTP>       // Typedef
 
 <EXP> ::= <MAP> | <MAT> | <ORR>
 <MAP> ::= map \( (<GTP> <VID> (, <GTP> <VID>)*)? \) -> (<VDF>)* <EXP>
@@ -84,6 +84,9 @@ Below are the grammar rules for `JQL`.
 <BLV> ::= true | false
 <NMV> ::= ([1-9][0-9]*|0)(\.[0-9]+)?
 <STV> ::= "[^"\n]*"
+
+// Type Definition Types...
+
 <GTP> ::= \[ <GTP> \]
         | \( <TPL> \) -> <GTP>
         | \{ <TPL> \}    // Struct type.
@@ -97,8 +100,8 @@ Below are the grammar rules for `JQL`.
 
 <IID> ::= [a-zA-Z_][a-zA-Z0-9_]*    // Identifier
 <IDL> ::= (<IID> (, <IID>)*)?       // Identifier List
-<DID> ::= <IID> (< <TPL> >)?        // Defined ID with type param list. 
-<TID> ::= <IID> (< <IID> >)?        // Type Identifier with generic type param list.
+<DID> ::= <IID> (\{ <TPL> \})?        // Defined ID with type param list. 
+<GID> ::= <IID> (\{ <IID> \})?        // Generic Identifier.
 ```
 
 <!-- ## Single Value Variables

@@ -270,9 +270,15 @@ class FList {
         }
 
         toString() {
-            let str_res = this.head.toString() + 
-                this.tail.foldl("", (res, ele) => res + ", " + ele);
-            return `[${str_res}]`;
+            return this.format()
+        }
+
+        format(sep=", ", inner="[", outer="]") {
+            let eles = this.#tail.foldl(this.#head.toString(), 
+                (res, ele) => res + sep + ele
+            );
+
+            return inner + eles + outer;
         }
     };
 
@@ -307,6 +313,10 @@ class FList {
 
         toString() {
             return "[]";
+        }
+
+        format(sep=", ", inner="[", outer="]") {
+            return inner + outer;
         }
     };
 

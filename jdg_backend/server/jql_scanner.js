@@ -1,4 +1,4 @@
-const { Try, Option, JQLError } = require("./utils");
+const { Try, JQLError } = require("./utils");
 
 class JQLSyntaxError extends JQLError {
     constructor(line, msg) {
@@ -17,7 +17,6 @@ class TokenType {
     static OR = new TokenType("<OR>");
     static AND = new TokenType("<AND>");
     static NOT = new TokenType("<NOT>");
-    // static VEC = new TokenType("<VEC>");
     static MAP = new TokenType("<MAP>");
     static NUM = new TokenType("<NUM>");
     static BUL = new TokenType("<BUL>");
@@ -47,7 +46,7 @@ class TokenType {
     static STV = new TokenType("<STV>");
     static NMV = new TokenType("<NMV>");
     static BLV = new TokenType("<BLV>");
-    static VID = new TokenType("<VID>");
+    static IID = new TokenType("<IID>");
 
     // static index.
     static STI = new TokenType("<STI>");
@@ -360,7 +359,7 @@ class JQLScanner {
                 return this.#find(RESERVED_WORDS_DICT[lex]);
             }
 
-            return this.#find(new Token(lex, TokenType.VID));
+            return this.#find(new Token(lex, TokenType.IID));
         }
 
         this.#error("Invalid token starting character " + c + ".");

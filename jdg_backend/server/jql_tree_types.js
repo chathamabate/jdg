@@ -26,7 +26,7 @@ class Program {
     }
 
     toString() {
-        return this.#stmts.foldl("", (res, ele) => res + "\n" + ele.toString() + "\n");
+        return this.stmts.format("\n", "", "\n");
     }
 }
 
@@ -238,17 +238,13 @@ class Map {
     }
 
     toString() {
-        let type_strs = this.#args.match(
-            (head, tail) => tail.foldl(head.toString(), 
-                (res, ele) => res + ", " + ele.toString()),
-            () => ""
-        );
+        let type_strs = this.#args.format(", ", "(", ")");
 
         let body_str = this.#vdfs.foldl("", 
             (res, ele) => res + ele.toString() + "\n"
         ) + this.#exp.toString();
 
-        return `map (${type_strs}) -> ${checkIndent(body_str)}`;
+        return `map ${type_strs} -> ${checkIndent(body_str)}`;
     }
 }
 
@@ -583,12 +579,7 @@ class ArgList {
     }
 
     toString() {
-        return this.#args.match(
-            (head, tail) => "(" + tail.foldl(
-                head.toString(), (res, ele) => res + ", " + ele.toString()
-            ) + ")",
-            () => "()"  
-        );
+        return this.#args.format(", ", "(", ")");
     }
 }
 
@@ -654,6 +645,57 @@ class Identifier {
     }
 }
 
+class ParamIdentifier {
+    static #BaseID = class {
+        // Identifier.
+        #bid;   // Base ID value.
+
+        constructor(bid) {
+            this.#bid = bid;
+        }
+
+        get bid() {
+            return this.#bid;
+        }
+    }
+
+    static #GenericID = class extends ParamIdentifier.#BaseID {
+        // FList<Identifier>
+        #generics;
+
+        constructor(bid, generics) {
+            super(bid);
+            this.#generics = generics;
+        }
+
+        get generics() {
+            return this.#generics;
+        }
+
+        toString() {
+            return this.bid.toString() + this.#generics.format(", ", "{", "}");
+        }
+    }
+
+    static TypedID = class extends ParamIdentifier.#BaseID {
+        // FList<TypeSig>
+        #typeParams;
+
+        constructor(bid, typeParams) {
+            super(bid);
+            this.#typeParams = typeParams;
+        }
+
+        get typeParams() {
+            return this.#typeParams;
+        }
+
+        toString() {
+            return this.bid.toString() + this.#typeParams.format(", ", "{", "}");
+        }
+    }
+}
+
 class Vector {
     // FList<Match | Map | Or>
     #exps;
@@ -667,14 +709,7 @@ class Vector {
     }
 
     toString() {
-        return this.#exps.match(
-            (head, tail) => 
-                "[" + tail.foldl(
-                    head.toString(), 
-                    (res, ele) => res + ", " + ele.toString()
-                ) + "]",
-            () => "[]"
-        );
+        return this.#exps.format();
     }
 }
 
@@ -691,11 +726,7 @@ class Struct {
     }
 
     toString() {
-        return this.#fields.match(
-            (head, tail) => "{" + tail.foldl(head.toString(), 
-                (res, ele) => res + ", " + ele.toString()) + "}",
-            () => "{}"
-        ); 
+        return this.#fields.format(", ", "{", "}");
     }
 }
 
@@ -835,14 +866,9 @@ class TypeSig {
         }
 
         toString() {
-            let inputStr = this.#inputTypes.match(
-                (head, tail) => tail.foldl(head.toString(), 
-                    (res, ele) => res + ", " + ele.toString()
-                ),
-                () => ""
-            );
+            let inputStr = this.#inputTypes.format(", ", "(", ")");
 
-            return `(${inputStr}) -> ${this.#outputType.toString()}`
+            return `S${inputStr} -> ${this.#outputType.toString()}`
         }
     }
 
@@ -859,11 +885,7 @@ class TypeSig {
         } 
 
         toString() {
-            return this.#fieldTypes.match(
-                (head, tail) => "{" + tail.foldl(head.toString(), 
-                    (res, ele) => res + ", " + ele.toString()) + "}",
-                () => "{}"
-            ); 
+            return this.#fieldTypes.format(", ", "{", "}");
         }
     }
 }
