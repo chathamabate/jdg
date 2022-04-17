@@ -55,8 +55,9 @@ Below are the grammar rules for `JQL`.
 
 <PRG> ::= (<VDF> | <STM>)* <EOF>
 <STM> ::= do <EXP>
-<VDF> ::= define <GTP> <VID> as <EXP>
-<TDF> ::= type <VID> as <GTP>       // Typedef
+<VDF> ::= define <TID> as <EXP>
+<TDF> ::= type <TID> as <GTP>       // Typedef
+
 <EXP> ::= <MAP> | <MAT> | <ORR>
 <MAP> ::= map \( (<GTP> <VID> (, <GTP> <VID>)*)? \) -> (<VDF>)* <EXP>
 <MAT> ::= match (<EXP>)? (case <EXP> -> <EXP>)* default -> <EXP> 
@@ -69,27 +70,35 @@ Below are the grammar rules for `JQL`.
 <NEG> ::= (-)? <APP>
 <APP> ::= <ADR> ( <IND> | <AGL> | <STI>)*
         | <BLV> | <NMV> | <STV>
-<ADR> ::= <VID>              // Something which is indexable or callable.
+<ADR> ::= <DID> // Value which is indexable or callable.
         | <STC>
         | <VEC>
         | \(  <EXP> \)
-<AGL> ::= \( (<EXL>)?  \)    // Arg List
+<AGL> ::= \( <EXL>  \)                  // Arg List
 <IND> ::= \[ <EXP> \]                   // Index.
 <STI> ::= \.(0|[1-9][0-9]*)             // Static Index for structs.
-<VID> ::= [a-zA-Z_][a-zA-Z0-9_]* 
-<VEC> ::= \[ (<EXL>)? \]
-<STC> ::= \{ (<EXL>)? \}
-<EXL> ::= <EXP> (, <EXP>)*              // Expresssion List.
+
+<VEC> ::= \[ <EXL> \]
+<STC> ::= \{ <EXL> \}
+<EXL> ::= (<EXP> (, <EXP>)*)?           // Expresssion List.
 <BLV> ::= true | false
 <NMV> ::= ([1-9][0-9]*|0)(\.[0-9]+)?
 <STV> ::= "[^"\n]*"
 <GTP> ::= \[ <GTP> \]
-        | \( (<TPL>)?  \) -> <GTP>
-        | \{ (<TPL>)? \}    // Struct type.
+        | \( <TPL> \) -> <GTP>
+        | \{ <TPL> \}    // Struct type.
         | <PTP>
-        | <VID>
-<TPL> ::= <GTP> (, <GTP>)*  // Type list.
+        | <DID>
+<TPL> ::= (<GTP> (, <GTP>)*)?  // Type list.
 <PTP> ::= num | bool | str
+
+
+// Identifier Types...
+
+<IID> ::= [a-zA-Z_][a-zA-Z0-9_]*    // Identifier
+<IDL> ::= (<IID> (, <IID>)*)?       // Identifier List
+<DID> ::= <IID> (< <TPL> >)?        // Defined ID with type param list. 
+<TID> ::= <IID> (< <IID> >)?        // Type Identifier with generic type param list.
 ```
 
 <!-- ## Single Value Variables
