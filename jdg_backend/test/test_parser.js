@@ -8,16 +8,17 @@ const STS = [
     "define x as 5 do 6",
     "do 8 type x as num",
     "define x as y",
-    "define x as (map (num x, num y) -> [x, y])(0, {1, 2}.0)[2]",
+    "define x as (map (num x, num y) -> vec{num}[x, y])(0, {1, 2}.0)[2]",
     "do {1, {\"hello\", 56, true}}.1.1",
     "",
     "do match x + 5 case 3 -> 5 case 1 -> {} default -> 39",
     "define x as match default -> 50",
-    "do [].4.56.23[1203.453]()(x, y, z)",
+    "do vec{str}[].4.56.23[1203.453]()(x, y, z)",
     "do 6 and not -2 + -7 - - 8 or (3 and (6 or 3))",
     "define x{T, R} as map (T x, [R] y) -> x",
     "define m{} as map () -> define g{T, R} as 6 5",
-    "type obj{Q, R} as {Q, (R, Q, obj2{num, T}) -> Q, num}"
+    "type obj{Q, R} as {Q, (R, Q, obj2{num, T}) -> Q, num}",
+    "define m{T} as map (T in) -> in do m{num}(4)"
 ];
 
 describe("Parser Success Tests", () => {
@@ -52,7 +53,8 @@ const FTS = [
     "define num x as num",
     "do match case 1 -> 1",
     "define x y as 10",
-    "do [56][]"
+    "do [56][]",
+    "do []"
 ];
 
 describe("Parser Failure Tests", () => {

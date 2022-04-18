@@ -1,5 +1,4 @@
-const {Token, TokenType, JQLScanner} = require("./jql_scanner");
-const {FList, Try} = require("./utils");
+const {Token} = require("./jql_scanner");
 
 const INDENT = "  ";
 
@@ -25,12 +24,16 @@ class Program {
         return this.#stmts;
     }
 
+    accept(visitor) {
+        return visitor.visitProgram(this);
+    }
+
     toString() {
         return this.stmts.format("\n", "", "\n");
     }
 }
 
-class Statment {
+class Statement {
     // Match | Map | Or
     #exp;
 
@@ -40,6 +43,10 @@ class Statment {
 
     get exp() {
         return this.#exp;
+    }
+
+    accept(visitor) {
+        return visitor.visitStatement(this);
     }
 
     toString() {
@@ -67,6 +74,10 @@ class VarDefine {
         return this.#exp;
     }
 
+    accept(visitor) {
+        return visitor.visitVarDefine(this);
+    }
+
     toString() {
         return `define ${this.gid.toString()} as ${checkIndent(this.#exp.toString())}`;
     }
@@ -92,6 +103,10 @@ class TypeDef {
         return this.#ts;
     }
 
+    accept(visitor) {
+        return visitor.visitTypeDef(this);
+    }
+
     toString() {
         return `type ${this.#gid.toString()} as ${this.#ts.toString()}`;
     }
@@ -115,6 +130,10 @@ class Case {
         return this.#conseq;
     }
 
+    accept(visitor) {
+        return visitor.visitCase(this);
+    }
+
     toString() {
         return "case " + checkIndent(this.test.toString()) + "\n-> " + 
             checkIndent(this.conseq.toString());
@@ -123,14 +142,14 @@ class Case {
 
 class Match {
     static defaultMatch(c, dc) {
-        return new Match.#DefualtMatch(c, dc);
+        return new Match.#DefaultMatch(c, dc);
     }
 
     static valueMatch(p, c, dc) {
         return new Match.#ValueMatch(p, c, dc);
     }
 
-    static #DefualtMatch = class {
+    static #DefaultMatch = class {
         // FList<Case>
         #cases;
 
@@ -154,6 +173,10 @@ class Match {
             return this.#defaultCase;
         }
 
+        accept(visitor) {
+            return visitor.visitDefaultMatch(this);
+        }
+
         toString() {
             return "match" + 
                     this.#cases.foldl("", 
@@ -162,7 +185,7 @@ class Match {
         }
     };
 
-    static #ValueMatch = class extends Match.#DefualtMatch {
+    static #ValueMatch = class extends Match.#DefaultMatch {
         // Match | Map | Or
         #pivot;
 
@@ -173,6 +196,10 @@ class Match {
 
         get pivot() {
             return this.#pivot;
+        }
+
+        accept(visitor) {
+            return visitor.visitValueMatch(this);
         }
 
         toString() {
@@ -202,6 +229,10 @@ class Argument {
 
     get vid() {
         return this.#vid;
+    }
+
+    accept(visitor) {
+        return visitor.visitArgument(this);
     }
 
     toString() {
@@ -235,6 +266,10 @@ class Map {
 
     get exp() {
         return this.#exp;
+    }
+
+    accept(visitor) {
+        return visitor.visitMap(this);
     }
 
     toString() {
@@ -273,6 +308,10 @@ class BooleanChain {
             throw new Error("Default chain has no operator.");
         }
 
+        accept(visitor) {
+            throw new Error("Default chain cannot be visited.");
+        }
+
         toString() {
             return this.#exps.tail.foldl(this.#exps.head.toString(), 
                 (res, ele) => `${res} ${this.opLex} ${ele.toString()}`);
@@ -288,6 +327,10 @@ class BooleanChain {
         get opLex() {
             return Token.T_OR.lexeme;
         }
+
+        accept(visitor) {
+            return visitor.visitOrChain(this);
+        }
     };
 
     static #AndChain = class extends BooleanChain.#DefChain {
@@ -298,6 +341,10 @@ class BooleanChain {
 
         get opLex() {
             return Token.T_AND.lexeme;
+        }
+
+        accept(visitor) {
+            return visitor.visitAndChain(this);
         }
     };
 }
@@ -312,6 +359,10 @@ class Not {
 
     get comparison() {
         return this.#cmp;
+    }
+
+    accept(visitor) {
+        return visitor.visitNot(this);
     }
 
     toString() {
@@ -361,6 +412,10 @@ class Comparison {
         get opLex() {
             throw new Error("Empty Comparison has no opLex!");
         }
+
+        accept(visitor) {
+            throw new Error("Defualt compare cannot be visited.");
+        }
     
         toString() {
             return `${this.#lsum.toString()} ${this.opLex} ${this.#rsum.toString()}`;
@@ -375,6 +430,10 @@ class Comparison {
         get opLex() {
             return Token.T_EQU.lexeme;
         }
+
+        accept(visitor) {
+            return visitor.visitEq(this);
+        }
     };
 
     static #LtEq = class extends Comparison.#DefCmp {
@@ -384,6 +443,10 @@ class Comparison {
 
         get opLex() {
             return Token.T_LTE.lexeme;
+        }
+
+        accept(visitor) {
+            return visitor.visitLtEq(this);
         }
     };
 
@@ -395,6 +458,10 @@ class Comparison {
         get opLex() {
             return Token.T_GTE.lexeme;
         }
+
+        accept(visitor) {
+            return visitor.visitGtEq(this);
+        }
     };
 
     static #Lt = class extends Comparison.#DefCmp {
@@ -405,6 +472,10 @@ class Comparison {
         get opLex() {
             return Token.T_LT.lexeme;
         }
+
+        accept(visitor) {
+            return visitor.visitLt(this);
+        }
     };
 
     static #Gt = class extends Comparison.#DefCmp {
@@ -414,6 +485,10 @@ class Comparison {
 
         get opLex() {
             return Token.T_GT.lexeme;
+        }
+
+        accept(visitor) {
+            return visitor.visitGt(this);
         }
     };
 }
@@ -451,6 +526,10 @@ class OpChainTerm {
             throw new Error("Defualt term has no op lex!");
         }
 
+        accept(visitor) {
+            throw new Error("Default Chain Term cannot be visited.");
+        }
+
         toString() {
             return this.opLex + " " + this.#val.toString();
         }
@@ -464,6 +543,10 @@ class OpChainTerm {
         get opLex() {
             return Token.T_PLS.lexeme;
         }
+
+        accept(visitor) {
+            return visitor.visitAddCT(this);
+        }
     }
 
     static #SubCT = class extends OpChainTerm.#DefOpCT {
@@ -473,6 +556,10 @@ class OpChainTerm {
 
         get opLex() {
             return Token.T_MIN.lexeme;
+        }
+
+        accept(visitor) {
+            return visitor.visitSubCT(this);
         }
     }
 
@@ -484,6 +571,10 @@ class OpChainTerm {
         get opLex() {
             return Token.T_TIM.lexeme;
         }
+
+        accept(visitor) {
+            return visitor.visitTimesCT(this);
+        }
     }
 
     static #DivCT = class extends OpChainTerm.#DefOpCT {
@@ -494,6 +585,10 @@ class OpChainTerm {
         get opLex() {
             return Token.T_DIV.lexeme;
         }
+
+        accept(visitor) {
+            return visitor.visitDivCT(this);
+        }
     }
 
     static #ModCT = class extends OpChainTerm.#DefOpCT {
@@ -503,6 +598,10 @@ class OpChainTerm {
 
         get opLex() {
             return Token.T_MOD.lexeme;
+        }
+
+        accept(visitor) {
+            return visitor.visitModCT(this);
         }
     }
 }
@@ -532,6 +631,10 @@ class OpChain {
         return this.#opChain;
     }
 
+    accept(visitor) {
+        return visitor.visitOpChain(this);
+    }
+
     toString() {
         return this.#opChain.foldl(
             this.#head.toString(),
@@ -552,6 +655,10 @@ class Negation {
         return this.#val;
     }
 
+    accept(visitor) {
+        return visitor.visitNegation(this);
+    }
+
     toString() {
         return Token.T_MIN.lexeme + this.#val;
     }
@@ -565,6 +672,10 @@ class Index {
         this.#exp = exp;
     }
 
+    accept(visitor) {
+        return visitor.visitIndex(this);
+    }
+
     toString() {
         return "[" + this.#exp.toString() + "]";
     }
@@ -576,6 +687,10 @@ class ArgList {
 
     constructor(args) {
         this.#args = args;
+    }
+
+    accept(visitor) {
+        return visitor.visitArgList(this);
     }
 
     toString() {
@@ -593,6 +708,10 @@ class StaticIndex {
 
     get index() {
         return this.#index;
+    }
+
+    accept(visitor) {
+        return visitor.visitStaticIndex(this);
     }
 
     toString() {
@@ -620,6 +739,10 @@ class SubScript {
         return this.#subscripts;
     }
 
+    accept(visitor) {
+        return visitor.visitSubScript(this);
+    }
+
     toString() {
         return this.#subscripts.foldl(
             this.#pivot.toString(),
@@ -638,6 +761,10 @@ class Identifier {
 
     get name() {
         return this.#name;
+    }
+
+    accept(visitor) {
+        return visitor.visitIdentifier(this);
     }
 
     toString() {
@@ -665,6 +792,10 @@ class ParamIdentifier {
         get bid() {
             return this.#bid;
         }
+
+        accept(visitor) {
+            throw new Error("Base Param ID cannot be visited.");
+        }
     }
 
     static #GenericID = class extends ParamIdentifier.#BaseID {
@@ -678,6 +809,10 @@ class ParamIdentifier {
 
         get generics() {
             return this.#generics;
+        }
+
+        accept(visitor) {
+            return visitor.visitGenericID(this);
         }
 
         toString() {
@@ -698,6 +833,10 @@ class ParamIdentifier {
             return this.#typeParams;
         }
 
+        accept(visitor) {
+            return visitor.visitTypedID(this);
+        }
+
         toString() {
             return this.bid.toString() + this.#typeParams.format(", ", "{", "}");
         }
@@ -705,19 +844,31 @@ class ParamIdentifier {
 }
 
 class Vector {
+    // TypeSignature
+    #ts;
+
     // FList<Match | Map | Or>
     #exps;
 
-    constructor(exps) {
+    constructor(ts, exps) {
+        this.#ts = ts;
         this.#exps = exps;
+    }
+
+    get ts() {
+        return this.#ts;
     }
 
     get exps() {
         return this.#exps;
     }
 
+    accept(visitor) {
+        return visitor.visitVector(this);
+    }
+
     toString() {
-        return this.#exps.format();
+        return `vec{${this.#ts.toString()}}${this.#exps.format()}`;
     }
 }
 
@@ -731,6 +882,10 @@ class Struct {
 
     get fields() {
         return this.#fields;
+    }
+
+    accept(visitor) {
+        return visitor.visitStruct(this);
     }
 
     toString() {
@@ -748,6 +903,10 @@ class Grouping {
 
     get exp() {
         return this.#exp;
+    }
+
+    accept(visitor) {
+        return visitor.visitGrouping(this);
     }
 
     toString() {
@@ -775,6 +934,10 @@ class PrimitiveValue {
             return this.#val;
         }
 
+        accept(visitor) {
+            throw new Error("Dynamic Value cannot be visited.");
+        }
+
         toString() {
             return this.#val.toString();
         }
@@ -784,17 +947,29 @@ class PrimitiveValue {
         constructor(val) {
             super(val);
         }
+
+        accept(visitor) {
+            return visitor.visitBoolVal(this);
+        }
     }
 
     static #NumVal = class extends PrimitiveValue.#DVal {
         constructor(val) {
             super(val);
         }
+
+        accept(visitor) {
+            return visitor.visitNumVal(this);
+        }
     }
 
     static #StrVal = class extends PrimitiveValue.#DVal {
         constructor(val) {
             super(val);
+        }
+
+        accept(visitor) {
+            return visitor.visitStrVal(this);
         }
 
         toString() {
@@ -808,18 +983,30 @@ class PrimitiveValue {
 
 class TypeSig {
     static #TypeNum = class {
+        accept(visitor) {
+            return visitor.visitTypeNum(this);
+        }
+
         toString() {
             return Token.T_NUM.lexeme;
         }
     }
 
     static #TypeBool = class {
+        accept(visitor) {
+            return visitor.visitTypeBool(this);
+        }
+
         toString() {
             return Token.T_BUL.lexeme;
         }
     }
 
     static #TypeStr = class {
+        accept(visitor) {
+            return visitor.visitTypeStr(this);
+        }
+
         toString() {
             return Token.T_STR.lexeme;
         }
@@ -852,6 +1039,10 @@ class TypeSig {
             return this.#innerType;
         }
 
+        accept(visitor) {
+            return visitor.visitTypeVec(this);
+        }
+
         toString() {
             return `[${this.#innerType.toString()}]`
         }
@@ -873,6 +1064,10 @@ class TypeSig {
             return this.#outputType;
         }
 
+        accept(visitor) {
+            return visitor.visitTypeMap(this);
+        }
+
         toString() {
             let inputStr = this.#inputTypes.format(", ", "(", ")");
 
@@ -892,15 +1087,67 @@ class TypeSig {
             return this.#fieldTypes;
         } 
 
+        accept(visitor) {
+            return visitor.visitTypeStruct(this);
+        }
+
         toString() {
             return this.#fieldTypes.format(", ", "{", "}");
         }
     }
 }
 
+const NOT_IMPLEMENTED_ERROR = new Error("Visitor not implemented.");
+
+class TreeVisitor {
+    visitProgram(program) { throw NOT_IMPLEMENTED_ERROR; }
+    visitStatement(statement) { throw NOT_IMPLEMENTED_ERROR; }
+    visitVarDefine(varDefine) { throw NOT_IMPLEMENTED_ERROR; }
+    visitTypeDef(typeDef) { throw NOT_IMPLEMENTED_ERROR; }
+    visitCase(cas) { throw NOT_IMPLEMENTED_ERROR; }
+    visitDefaultMatch(defMatch) { throw NOT_IMPLEMENTED_ERROR; }
+    visitValueMatch(valMatch) { throw NOT_IMPLEMENTED_ERROR; }
+    visitArgument(arg) { throw NOT_IMPLEMENTED_ERROR; }
+    visitMap(map) { throw NOT_IMPLEMENTED_ERROR; }
+    visitOrChain(orChain) { throw NOT_IMPLEMENTED_ERROR; }
+    visitAndChain(andChain) { throw NOT_IMPLEMENTED_ERROR; }
+    visitNot(not) { throw NOT_IMPLEMENTED_ERROR; }
+    visitEq(eq) { throw NOT_IMPLEMENTED_ERROR; }
+    visitLtEq(ltEq) { throw NOT_IMPLEMENTED_ERROR; }
+    visitGtEq(gtEq) { throw NOT_IMPLEMENTED_ERROR; }
+    visitLt(lt) { throw NOT_IMPLEMENTED_ERROR; }
+    visitGt(gt) { throw NOT_IMPLEMENTED_ERROR; }
+    visitAddCT(addCT) { throw NOT_IMPLEMENTED_ERROR; }
+    visitSubCT(subCT) { throw NOT_IMPLEMENTED_ERROR; }
+    visitTimesCT(timesCT) { throw NOT_IMPLEMENTED_ERROR; }
+    visitDivCT(divCT) { throw NOT_IMPLEMENTED_ERROR; }
+    visitModCT(modCT) { throw NOT_IMPLEMENTED_ERROR; }
+    visitOpChain(opChain) { throw NOT_IMPLEMENTED_ERROR; }
+    visitNegation(negation) { throw NOT_IMPLEMENTED_ERROR; }
+    visitIndex(index) { throw NOT_IMPLEMENTED_ERROR; }
+    visitArgList(argList) { throw NOT_IMPLEMENTED_ERROR; }
+    visitStaticIndex(staticIndex) { throw NOT_IMPLEMENTED_ERROR; }
+    visitSubScript(subscript) { throw NOT_IMPLEMENTED_ERROR; }
+    visitIdentifier(identifier) { throw NOT_IMPLEMENTED_ERROR; }
+    visitGenericID(gid) { throw NOT_IMPLEMENTED_ERROR; }
+    visitTypedID(typedID) { throw NOT_IMPLEMENTED_ERROR; }
+    visitVector(vector) { throw NOT_IMPLEMENTED_ERROR; }
+    visitStruct(struct) { throw NOT_IMPLEMENTED_ERROR; }
+    visitGrouping(grouping) { throw NOT_IMPLEMENTED_ERROR; }
+    visitBoolVal(boolVal) { throw NOT_IMPLEMENTED_ERROR; }
+    visitNumVal(numVal) { throw NOT_IMPLEMENTED_ERROR; }
+    visitStrVal(strVal) { throw NOT_IMPLEMENTED_ERROR; }
+    visitTypeNum(typeNum) { throw NOT_IMPLEMENTED_ERROR; }
+    visitTypeBool(typeBool) { throw NOT_IMPLEMENTED_ERROR; }
+    visitTypeStr(typeStr) { throw NOT_IMPLEMENTED_ERROR; }
+    visitTypeVec(typeVec) { throw NOT_IMPLEMENTED_ERROR; }
+    visitTypeMap(typeMap) { throw NOT_IMPLEMENTED_ERROR; }
+    visitTypeStruct(typeStruct) { throw NOT_IMPLEMENTED_ERROR; }
+}
+
 module.exports = {
     Program: Program,
-    Statment: Statment,
+    Statment: Statement,
     VarDefine: VarDefine,
     TypeDef: TypeDef,
     Case: Case,
@@ -923,5 +1170,6 @@ module.exports = {
     Struct: Struct,
     Grouping: Grouping,
     PrimitiveValue: PrimitiveValue,
-    TypeSig: TypeSig
+    TypeSig: TypeSig,
+    TreeVisitor: TreeVisitor
 }

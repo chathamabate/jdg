@@ -51,10 +51,6 @@ class JQLParser {
         return token;
     }
 
-    // Uppercase letters denote that we know said type is coming.
-    // (That is the current lookahead will be overwritten)
-    // Lowercase letters denote that the current lookahead will be used.
-
     #program(advance = false) {
         if (advance) this.#sc.next();
 
@@ -504,9 +500,7 @@ class JQLParser {
         
         switch (this.#sc.curr.token_type) {
             case TokenType.IID:
-                let vid_t = this.#sc.curr;
-                this.#sc.next(); // Advance past ID.
-                return new TreeTypes.Identifier(vid_t.lexeme);
+                return this.#typedID();
             case TokenType.LCB:
                 let fields = FList.EMPTY;
                 if (this.#sc.next().token_type != TokenType.RCB) {
@@ -514,13 +508,20 @@ class JQLParser {
                 }
                 this.#expect(TokenType.RCB, "Struct value must be followed by \"}\".");
                 return new TreeTypes.Struct(fields.reverse());
-            case TokenType.LBR:
+            case TokenType.VEC:
+                this.#expect(TokenType.LCB, "Vector requires type.", true);
+                let ts = this.#typeSig();
+
+                this.#expect(TokenType.RCB, "Vector requires closed type defintion.");
+                this.#expect(TokenType.LBR, "Vector requires value section.");
+
                 let cells = FList.EMPTY;
-                if (this.#sc.next().token_type != TokenType.RBR) {
+                if (this.#sc.curr.token_type != TokenType.RBR) {
                     cells = this.#expList();
                 }
                 this.#expect(TokenType.RBR, "Vector value must be followed by \"]\".");
-                return new TreeTypes.Vector(cells.reverse());
+
+                return new TreeTypes.Vector(ts, cells.reverse());
             case TokenType.LPN:
                 let exp = this.#expression(true);
                 this.#expect(TokenType.RPN, "Grouping must be followed by \")\"");

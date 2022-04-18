@@ -12,7 +12,7 @@ There are 3 primitive `JQL` types.
 
 There are 3 extensible `JQL` types.
 * A `map` is a function which takes 0 or more inputs and returns a single output.
-* A `vector` is an ordered sequence of values (all the same type).
+* A `vec` is an ordered sequence of values (all the same type).
 * A `struct` is an ordered sequence of values with specified types.
 
 Types can be defined by the user using a type definition statment.
@@ -40,12 +40,14 @@ type NumVector as [num]
 // {<FieldType1>, <FieldType2>, ...}
 type Date as {str, num, num}
 ```
-Map types also allow for generic types. This is useful in situations where 
-the user wants a function which has arbitrary input or return types.
+Type definitions also allow the introduction of generic types.
 ```
-// An identifier which is not a defined type or reserved word will be treated as 
-// a generic in type definitions.
-type ArbMap as (T) -> R
+type UnOp{T} as (T) -> T
+```
+Lastly, type defintions are __NOT__ recursive.
+```
+// The following type definition will throw an error.
+type invalidType as () -> invalidType
 ```
 
 ## Grammar 
@@ -78,7 +80,7 @@ Below are the grammar rules for `JQL`.
 <IND> ::= \[ <EXP> \]                   // Index.
 <STI> ::= \.(0|[1-9][0-9]*)             // Static Index for structs.
 
-<VEC> ::= \[ <EXL> \]
+<VEC> ::= vec \{ <GTP> \} \[ <EXL> \]
 <STC> ::= \{ <EXL> \}
 <EXL> ::= (<EXP> (, <EXP>)*)?           // Expresssion List.
 <BLV> ::= true | false

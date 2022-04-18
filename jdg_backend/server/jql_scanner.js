@@ -18,6 +18,7 @@ class TokenType {
     static AND = new TokenType("<AND>");
     static NOT = new TokenType("<NOT>");
     static MAP = new TokenType("<MAP>");
+    static VEC = new TokenType("<VEC>");
     static NUM = new TokenType("<NUM>");
     static BUL = new TokenType("<BUL>");
     static STR = new TokenType("<STR>");
@@ -78,6 +79,7 @@ class Token {
     static T_NOT = new Token("not", TokenType.NOT);
     // static T_VEC = new Token("vec", TokenType.VEC);
     static T_MAP = new Token("map", TokenType.MAP);
+    static T_VEC = new Token("vec", TokenType.VEC);
     static T_NUM = new Token("num", TokenType.NUM);
     static T_BUL = new Token("bool", TokenType.BUL);
     static T_STR = new Token("str", TokenType.STR);
@@ -91,7 +93,7 @@ class Token {
         Token.T_OR, Token.T_AND, Token.T_NOT,
         Token.T_NUM, Token.T_BUL, Token.T_STR,
         Token.T_TRU, Token.T_FAL, Token.T_MAP,
-        Token.T_TYP
+        Token.T_VEC, Token.T_TYP
     ];
 
     static T_LPN = new Token("(", TokenType.LPN);
