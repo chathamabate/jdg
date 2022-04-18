@@ -51,7 +51,7 @@ const et6 = [
 
 const et7 = [
     "hello123 123hello",
-    [TokenType.VID, TokenType.NMV, TokenType.VID, TokenType.EOF]
+    [TokenType.IID, TokenType.NMV, TokenType.IID, TokenType.EOF]
 ];
 
 const et8 = [

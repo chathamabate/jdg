@@ -81,13 +81,13 @@ class JQLParser {
     #varDefine(advance = false) {
         if (advance) this.#sc.next();
 
-        let ts = this.#typeSig();
-        let id_tok = this.#expect(TokenType.VID, "Define statement missing ID.");
+        // let ts = this.#typeSig();    // No More type signatures.
+        let genericID = this.#genericID();
         this.#expect(TokenType.AS, "Define statement missing \"as\' token.");
         let exp = this.#expression();
 
         return new TreeTypes.VarDefine(
-            new TreeTypes.Argument(ts, new TreeTypes.Identifier(id_tok.lexeme)),
+            genericID,
             exp
         );
     }
@@ -95,11 +95,72 @@ class JQLParser {
     #typeDef(advance = false) {
         if (advance) this.#sc.next();
 
-        let vid_t = this.#expect(TokenType.VID, "ID missing from type definition.");
+        let gid = this.#genericID();
         this.#expect(TokenType.AS, "\"as\" missing from type definition.");
         let ts = this.#typeSig();
 
-        return new TreeTypes.TypeDef(new TreeTypes.Identifier(vid_t.lexeme), ts);
+        return new TreeTypes.TypeDef(gid, ts);
+    }
+
+    #genericID(advance = false) {
+        if (advance) this.#sc.next();
+
+        let iid_t = this.#expect(TokenType.IID, "ID missing from identifier.");
+        let bid = new TreeTypes.Identifier(iid_t.lexeme);
+
+        if (this.#sc.curr.token_type != TokenType.LCB) {
+            return bid;
+        }
+
+        this.#sc.next();    // Throw out left curly brace.
+
+        if (this.#sc.curr.token_type == TokenType.RCB) {
+            this.#sc.next();    // Throw out right curly brace.
+            return bid;
+        }
+
+        let generics = FList.cons(
+            new TreeTypes.Identifier(
+                this.#expect(TokenType.IID, "ID expected in generic list.").lexeme
+            ),
+            FList.EMPTY
+        );
+
+        while (this.#sc.curr.token_type == TokenType.COM) {
+            generics = FList.cons(
+                new TreeTypes.Identifier(
+                    this.#expect(TokenType.IID, "ID expected in generic list.", true).lexeme
+                ),
+                FList.EMPTY
+            );
+        }
+
+        this.#expect(TokenType.RCB, "\"}\" must end generic type list.");
+
+        return TreeTypes.ParamIdentifier.genericID(bid, generics.reverse());
+    }
+
+    #typedID(advance = false) {
+        if (advance) this.#sc.next();
+
+        let iid_t = this.#expect(TokenType.IID, "ID missing from identifier.");
+        let bid = new TreeTypes.Identifier(iid_t.lexeme);
+
+        if (this.#sc.curr.token_type != TokenType.LCB) { 
+            return bid;
+        }
+
+        this.#sc.next(); // Throw out lcb.
+
+        if (this.#sc.curr.token_type == TokenType.RCB) {
+            this.#sc.next(); // throw out rcb.
+            return bid;
+        }
+
+        let typeParams = this.#typeList();
+        this.#expect(TokenType.RCB, "\"}\" must end type param list.");
+
+        return TreeTypes.ParamIdentifier.typedID(bid, typeParams.reverse());
     }
 
     #typeSig(advance = false) {
@@ -141,9 +202,8 @@ class JQLParser {
             case TokenType.BUL:
                 this.#sc.next(); // Advance.
                 return TreeTypes.TypeSig.BOOL;
-            case TokenType.VID:
-                this.#sc.next(); // Advance.
-                return new TreeTypes.Identifier(lah.lexeme);
+            case TokenType.IID:
+                return this.#typedID();
             default:
                 this.#error("Cannot parse type signature.")
         }
@@ -243,7 +303,7 @@ class JQLParser {
         if (advance) this.#sc.next();
 
         let ts = this.#typeSig();
-        let vid_t = this.#expect(TokenType.VID, "Argument expects ID.");
+        let vid_t = this.#expect(TokenType.IID, "Argument expects ID.");
 
         return new TreeTypes.Argument(ts, new TreeTypes.Identifier(vid_t.lexeme));
     }
@@ -443,7 +503,7 @@ class JQLParser {
         if (advance) this.#sc.next();
         
         switch (this.#sc.curr.token_type) {
-            case TokenType.VID:
+            case TokenType.IID:
                 let vid_t = this.#sc.curr;
                 this.#sc.next(); // Advance past ID.
                 return new TreeTypes.Identifier(vid_t.lexeme);

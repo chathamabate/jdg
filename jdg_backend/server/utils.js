@@ -275,7 +275,7 @@ class FList {
 
         format(sep=", ", inner="[", outer="]") {
             let eles = this.#tail.foldl(this.#head.toString(), 
-                (res, ele) => res + sep + ele
+                (res, ele) => res + sep + ele.toString()
             );
 
             return inner + eles + outer;

@@ -4,17 +4,20 @@ const { JQLParser, JQL, JQLParseError } = require("../server/jql_parser")
 // Parseable Programs. (Not necessarily semantically correct!)
 const STS = [
     "do 5",
-    "define num x as 5",
-    "define num x as 5 do 6",
+    "define x as 5",
+    "define x as 5 do 6",
     "do 8 type x as num",
-    "define (num, [{num, str, bool}]) -> {bool, bool} x as y",
-    "define num x as (map (num x, num y) -> [x, y])(0, {1, 2}.0)[2]",
+    "define x as y",
+    "define x as (map (num x, num y) -> [x, y])(0, {1, 2}.0)[2]",
     "do {1, {\"hello\", 56, true}}.1.1",
     "",
     "do match x + 5 case 3 -> 5 case 1 -> {} default -> 39",
-    "define str x as match default -> 50",
+    "define x as match default -> 50",
     "do [].4.56.23[1203.453]()(x, y, z)",
-    "do 6 and not -2 + -7 - - 8 or (3 and (6 or 3))"
+    "do 6 and not -2 + -7 - - 8 or (3 and (6 or 3))",
+    "define x{T, R} as map (T x, [R] y) -> x",
+    "define m{} as map () -> define g{T, R} as 6 5",
+    "type obj{Q, R} as {Q, (R, Q, obj2{num, T}) -> Q, num}"
 ];
 
 describe("Parser Success Tests", () => {
@@ -44,10 +47,11 @@ const FTS = [
     "6 7",
     "(100)",
     "type as num",
-    "define x as 10",
-    "type x as {100}",
+    "define num x as 10",
+    "type str x as {100}",
     "define num x as num",
     "do match case 1 -> 1",
+    "define x y as 10",
     "do [56][]"
 ];
 

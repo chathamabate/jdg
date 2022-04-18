@@ -48,19 +48,19 @@ class Statment {
 }
 
 class VarDefine {
-    // Argument
-    #arg;
+    // Identifier | GenericID
+    #gid;
 
     // Match | Map | Or
     #exp;
 
-    constructor(arg, exp) {
-        this.#arg = arg;
+    constructor(gid, exp) {
+        this.#gid = gid;
         this.#exp = exp;
     }
 
-    get arg() {
-        return this.#arg;
+    get gid() {
+        return this.#gid;
     }
 
     get exp() {
@@ -68,24 +68,24 @@ class VarDefine {
     }
 
     toString() {
-        return `define ${this.arg.toString()} as ${checkIndent(this.#exp.toString())}`;
+        return `define ${this.gid.toString()} as ${checkIndent(this.#exp.toString())}`;
     }
 }
 
 class TypeDef {
-    // Identifier.
-    #vid; 
+    // Identifier | GenericID
+    #gid; 
 
     // Type.
     #ts;
 
-    constructor(vid, ts) {
-        this.#vid = vid;
+    constructor(gid, ts) {
+        this.#gid = gid;
         this.#ts = ts;
     }
 
-    get vid() {
-        return this.#vid;
+    get gid() {
+        return this.#gid;
     }
 
     get ts() {
@@ -93,7 +93,7 @@ class TypeDef {
     }
 
     toString() {
-        return `type ${this.#vid.toString()} as ${this.#ts.toString()}`;
+        return `type ${this.#gid.toString()} as ${this.#ts.toString()}`;
     }
 }
 
@@ -646,6 +646,14 @@ class Identifier {
 }
 
 class ParamIdentifier {
+    static genericID(bid, generics) {
+        return new ParamIdentifier.#GenericID(bid, generics);
+    }
+
+    static typedID(bid, typeParams) {
+        return new ParamIdentifier.#TypedID(bid, typeParams);
+    }
+
     static #BaseID = class {
         // Identifier.
         #bid;   // Base ID value.
@@ -677,7 +685,7 @@ class ParamIdentifier {
         }
     }
 
-    static TypedID = class extends ParamIdentifier.#BaseID {
+    static #TypedID = class extends ParamIdentifier.#BaseID {
         // FList<TypeSig>
         #typeParams;
 
@@ -868,7 +876,7 @@ class TypeSig {
         toString() {
             let inputStr = this.#inputTypes.format(", ", "(", ")");
 
-            return `S${inputStr} -> ${this.#outputType.toString()}`
+            return `${inputStr} -> ${this.#outputType.toString()}`
         }
     }
 
@@ -910,6 +918,7 @@ module.exports = {
     StaticIndex: StaticIndex,
     SubScript: SubScript,
     Identifier: Identifier,
+    ParamIdentifier: ParamIdentifier,
     Vector: Vector,
     Struct: Struct,
     Grouping: Grouping,
