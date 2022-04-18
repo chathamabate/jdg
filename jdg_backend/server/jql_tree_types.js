@@ -1,4 +1,5 @@
 const {Token} = require("./jql_scanner");
+const { FList } = require("./utils");
 
 const INDENT = "  ";
 
@@ -1095,11 +1096,15 @@ class TypeSig {
             return this.#fieldTypes.format(", ", "{", "}");
         }
     }
+
+    static VOID = new TypeSig.#TypeStruct(FList.EMPTY);
 }
 
 const NOT_IMPLEMENTED_ERROR = new Error("Visitor not implemented.");
 
 class TreeVisitor {
+    constructor() { }
+
     visitProgram(program) { throw NOT_IMPLEMENTED_ERROR; }
     visitStatement(statement) { throw NOT_IMPLEMENTED_ERROR; }
     visitVarDefine(varDefine) { throw NOT_IMPLEMENTED_ERROR; }

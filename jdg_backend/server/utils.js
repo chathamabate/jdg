@@ -232,6 +232,15 @@ class FList {
             return this.#tail;
         }
 
+        foreach(f) {
+            let iter = this;
+
+            while (!iter.isEmpty) {
+                f(iter.head);
+                iter = iter.tail;
+            }
+        }
+
         map(f) {
             let res = new FList.#Cons(f(this.head), FList.EMPTY);
             let res_builder = res;
@@ -293,6 +302,10 @@ class FList {
     
         get tail() {
             throw new Error("Empty list has no head.")
+        }
+
+        foreach(f) {
+
         }
 
         map(f) {
