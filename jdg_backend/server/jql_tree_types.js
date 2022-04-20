@@ -753,58 +753,53 @@ class SubScript {
 }
 
 class Identifier {
-    // String value.
-    #name;
-
-    constructor(name) {
-        this.#name = name;
+    static baseID(name) {
+        return new Identifier.#BaseID(name);
     }
 
-    get name() {
-        return this.#name;
+    static genericID(name, generics) {
+        return new Identifier.#GenericID(name, generics);
     }
 
-    accept(visitor) {
-        return visitor.visitIdentifier(this);
-    }
-
-    toString() {
-        return this.#name;
-    }
-}
-
-class ParamIdentifier {
-    static genericID(bid, generics) {
-        return new ParamIdentifier.#GenericID(bid, generics);
-    }
-
-    static typedID(bid, typeParams) {
-        return new ParamIdentifier.#TypedID(bid, typeParams);
+    static typedID(name, typeParams) {
+        return new Identifier.#TypedID(name, typeParams);
     }
 
     static #BaseID = class {
-        // Identifier.
-        #bid;   // Base ID value.
+        // String.
+        #name;   // Base ID value.
 
-        constructor(bid) {
-            this.#bid = bid;
+        constructor(name) {
+            this.#name = name;
         }
 
-        get bid() {
-            return this.#bid;
+        get name() {
+            return this.#name;
+        }
+
+        get generics() {
+            return FList.EMPTY;
+        }
+
+        get typedParams() {
+            return FList.EMPTY;
         }
 
         accept(visitor) {
-            throw new Error("Base Param ID cannot be visited.");
+            return visitor.forBaseID(this);
+        }
+
+        toString() {
+            return this.#name;
         }
     }
 
-    static #GenericID = class extends ParamIdentifier.#BaseID {
+    static #GenericID = class extends Identifier.#BaseID {
         // FList<Identifier>
         #generics;
 
-        constructor(bid, generics) {
-            super(bid);
+        constructor(name, generics) {
+            super(name);
             this.#generics = generics;
         }
 
@@ -817,16 +812,16 @@ class ParamIdentifier {
         }
 
         toString() {
-            return this.bid.toString() + this.#generics.format(", ", "{", "}");
+            return this.name + this.#generics.format(", ", "{", "}");
         }
     }
 
-    static #TypedID = class extends ParamIdentifier.#BaseID {
+    static #TypedID = class extends Identifier.#BaseID {
         // FList<TypeSig>
         #typeParams;
 
-        constructor(bid, typeParams) {
-            super(bid);
+        constructor(name, typeParams) {
+            super(name);
             this.#typeParams = typeParams;
         }
 
@@ -839,7 +834,7 @@ class ParamIdentifier {
         }
 
         toString() {
-            return this.bid.toString() + this.#typeParams.format(", ", "{", "}");
+            return this.name + this.#typeParams.format(", ", "{", "}");
         }
     }
 }
@@ -988,6 +983,10 @@ class TypeSig {
             return visitor.visitTypeNum(this);
         }
 
+        typeEquals(type) {
+            return type instanceof TypeSig.#TypeNum;
+        }
+
         toString() {
             return Token.T_NUM.lexeme;
         }
@@ -998,6 +997,10 @@ class TypeSig {
             return visitor.visitTypeBool(this);
         }
 
+        typeEquals(type) {
+            return type instanceof TypeSig.#Bool;
+        }
+
         toString() {
             return Token.T_BUL.lexeme;
         }
@@ -1006,6 +1009,10 @@ class TypeSig {
     static #TypeStr = class {
         accept(visitor) {
             return visitor.visitTypeStr(this);
+        }
+
+        typeEquals(type) {
+            return type instanceof TypeSig.#TypeStr;
         }
 
         toString() {
@@ -1029,6 +1036,26 @@ class TypeSig {
         return new TypeSig.#TypeStruct(fts);
     }
 
+    static fListTypeEquals(flist1, flist2) {
+        let iter1 = flist1;
+        let iter2 = flist2;
+
+        while (!iter1.isEmpty && !iter2.isEmpty) {
+            if (!iter1.head.typeEquals(iter2.head)) {
+                return false;
+            }
+
+            iter1 = iter1.tail;
+            iter2 = iter2.tail;
+        }
+
+        if (!iter1.isEmpty || !iter2.isEmpty) {
+            return false; // Type length mismatch.
+        }
+
+        return true;
+    }
+
     static #TypeVec = class {
         // TypeSig | VID
         #innerType;
@@ -1038,6 +1065,14 @@ class TypeSig {
 
         get innerType() {
             return this.#innerType;
+        }
+
+        typeEquals(type) {
+            if (type instanceof TypeSig.#TypeVec) {
+                return this.#innerType.typeEquals(type.innerType);
+            }
+
+            return false;
         }
 
         accept(visitor) {
@@ -1065,6 +1100,18 @@ class TypeSig {
             return this.#outputType;
         }
 
+        typeEquals(type) {
+            if (type instanceof TypeSig.#TypeMap) {
+                if (!fListTypeEquals(this.#inputTypes, type.inputTypes)) {
+                    return false;
+                }
+
+                return this.#outputType.typeEquals(type.outputType);
+            }
+
+            return false;
+        }
+
         accept(visitor) {
             return visitor.visitTypeMap(this);
         }
@@ -1088,6 +1135,14 @@ class TypeSig {
             return this.#fieldTypes;
         } 
 
+        typeEquals(type) {
+            if (type instanceof TypeSig.#TypeStruct) {
+                return fListTypeEquals(this.#fieldTypes, type.fieldTypes);
+            }
+
+            return false;
+        }
+
         accept(visitor) {
             return visitor.visitTypeStruct(this);
         }
@@ -1097,6 +1152,23 @@ class TypeSig {
         }
     }
 
+    // This type is used for type checking...
+    // CANNOT be specified in syntax.
+    static #TypeAny = class {
+        accept(visitor) {
+            return visitor.visitTypeAny(this);
+        }
+
+        typeEquals(type) {
+            return type instanceof TypeSig.#TypeAny;
+        }
+
+        toString() {
+            return "?";
+        }
+    }
+
+    static ANY = new TypeSig.#TypeAny();
     static VOID = new TypeSig.#TypeStruct(FList.EMPTY);
 }
 
@@ -1133,8 +1205,8 @@ class TreeVisitor {
     visitArgList(argList) { throw NOT_IMPLEMENTED_ERROR; }
     visitStaticIndex(staticIndex) { throw NOT_IMPLEMENTED_ERROR; }
     visitSubScript(subscript) { throw NOT_IMPLEMENTED_ERROR; }
-    visitIdentifier(identifier) { throw NOT_IMPLEMENTED_ERROR; }
-    visitGenericID(gid) { throw NOT_IMPLEMENTED_ERROR; }
+    visitBaseID(baseID) { throw NOT_IMPLEMENTED_ERROR; }
+    visitGenericID(genericID) { throw NOT_IMPLEMENTED_ERROR; }
     visitTypedID(typedID) { throw NOT_IMPLEMENTED_ERROR; }
     visitVector(vector) { throw NOT_IMPLEMENTED_ERROR; }
     visitStruct(struct) { throw NOT_IMPLEMENTED_ERROR; }
@@ -1148,6 +1220,7 @@ class TreeVisitor {
     visitTypeVec(typeVec) { throw NOT_IMPLEMENTED_ERROR; }
     visitTypeMap(typeMap) { throw NOT_IMPLEMENTED_ERROR; }
     visitTypeStruct(typeStruct) { throw NOT_IMPLEMENTED_ERROR; }
+    visitTypeAny(typeAny) { throw NOT_IMPLEMENTED_ERROR; }
 }
 
 module.exports = {
@@ -1170,7 +1243,6 @@ module.exports = {
     StaticIndex: StaticIndex,
     SubScript: SubScript,
     Identifier: Identifier,
-    ParamIdentifier: ParamIdentifier,
     Vector: Vector,
     Struct: Struct,
     Grouping: Grouping,

@@ -219,6 +219,10 @@ class FList {
             this.#head = head;
             this.#tail = tail;
         }
+
+        get len() {
+            return this.foldl(0, (res, _) => res + 1);
+        }
     
         get isEmpty() {
             return false;
@@ -292,6 +296,11 @@ class FList {
     };
 
     static #Empty = class {
+
+        get len() {
+            return 0;
+        }
+
         get isEmpty() {
             return true;
         }

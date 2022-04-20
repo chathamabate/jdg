@@ -1,4 +1,5 @@
 const { TokenType, JQLScanner, Token } = require("./jql_scanner");
+const { Identifier } = require("./jql_tree_types");
 const TreeTypes = require("./jql_tree_types");
 const { FList, Try, JQLError } = require("./utils");
 
@@ -101,22 +102,21 @@ class JQLParser {
     #genericID(advance = false) {
         if (advance) this.#sc.next();
 
-        let iid_t = this.#expect(TokenType.IID, "ID missing from identifier.");
-        let bid = new TreeTypes.Identifier(iid_t.lexeme);
+        let name = this.#expect(TokenType.IID, "ID missing from identifier.").lexeme;
 
         if (this.#sc.curr.token_type != TokenType.LCB) {
-            return bid;
+            return Identifier.baseID(name);
         }
 
         this.#sc.next();    // Throw out left curly brace.
 
         if (this.#sc.curr.token_type == TokenType.RCB) {
             this.#sc.next();    // Throw out right curly brace.
-            return bid;
+            return Identifier.baseID(name);
         }
 
         let generics = FList.cons(
-            new TreeTypes.Identifier(
+            Identifier.baseID(
                 this.#expect(TokenType.IID, "ID expected in generic list.").lexeme
             ),
             FList.EMPTY
@@ -124,7 +124,7 @@ class JQLParser {
 
         while (this.#sc.curr.token_type == TokenType.COM) {
             generics = FList.cons(
-                new TreeTypes.Identifier(
+                Identifier.baseID(
                     this.#expect(TokenType.IID, "ID expected in generic list.", true).lexeme
                 ),
                 FList.EMPTY
@@ -133,30 +133,29 @@ class JQLParser {
 
         this.#expect(TokenType.RCB, "\"}\" must end generic type list.");
 
-        return TreeTypes.ParamIdentifier.genericID(bid, generics.reverse());
+        return TreeTypes.Identifier.genericID(name, generics.reverse());
     }
 
     #typedID(advance = false) {
         if (advance) this.#sc.next();
 
-        let iid_t = this.#expect(TokenType.IID, "ID missing from identifier.");
-        let bid = new TreeTypes.Identifier(iid_t.lexeme);
+        let name = this.#expect(TokenType.IID, "ID missing from identifier.").lexeme;
 
         if (this.#sc.curr.token_type != TokenType.LCB) { 
-            return bid;
+            return Identifier.baseID(name);
         }
 
         this.#sc.next(); // Throw out lcb.
 
         if (this.#sc.curr.token_type == TokenType.RCB) {
             this.#sc.next(); // throw out rcb.
-            return bid;
+            return Identifier.baseID(name);
         }
 
         let typeParams = this.#typeList();
         this.#expect(TokenType.RCB, "\"}\" must end type param list.");
 
-        return TreeTypes.ParamIdentifier.typedID(bid, typeParams.reverse());
+        return Identifier.typedID(name, typeParams.reverse());
     }
 
     #typeSig(advance = false) {
@@ -301,7 +300,7 @@ class JQLParser {
         let ts = this.#typeSig();
         let vid_t = this.#expect(TokenType.IID, "Argument expects ID.");
 
-        return new TreeTypes.Argument(ts, new TreeTypes.Identifier(vid_t.lexeme));
+        return new TreeTypes.Argument(ts, Identifier.baseID(vid_t.lexeme));
     }
 
     #or(advance = false) {
