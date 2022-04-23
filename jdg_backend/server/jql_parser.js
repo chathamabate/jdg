@@ -80,11 +80,13 @@ class JQLParser {
 
         // let ts = this.#typeSig();    // No More type signatures.
         let genericID = this.#genericID();
+        let ts = this.#typeSig();
         this.#expect(TokenType.AS, "Define statement missing \"as\' token.");
         let exp = this.#expression();
 
         return new TreeTypes.VarDefine(
             genericID,
+            ts,
             exp
         );
     }

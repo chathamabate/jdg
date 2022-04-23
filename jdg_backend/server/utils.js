@@ -345,7 +345,39 @@ class FList {
     static EMPTY = new FList.#Empty();
 }
 
+// NOT FUNCTIONAL....
+// Uses FList tho.
+class FListTable {
+    // String -> FList<Whateva>
+    #table;
+
+    constructor() { 
+        this.#table = {}
+    }
+
+    contains(id) {
+        return (id in this.#table) && (!this.#table[id].isEmpty);
+    }
+
+    lookUp(id) {
+        return this.#table[id].head;
+    }
+
+    define(id, val) {
+        if (!(id in this.#table)) {
+            this.#table[id] = FList.EMPTY;
+        }
+
+        this.#table[id] = FList.cons(val,  this.#table[id]);
+    }
+
+    pop(id) {
+        this.#table[id] = this.#table[id].tail;
+    }
+}
+
 module.exports.Try = Try;
 module.exports.Option = Option;
 module.exports.FList = FList;
+module.exports.FListTable = FListTable;
 module.exports.JQLError = JQLError;

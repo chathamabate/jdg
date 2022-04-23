@@ -59,16 +59,24 @@ class VarDefine {
     // Identifier | GenericID
     #gid;
 
+    // TypeSig
+    #ts;
+
     // Match | Map | Or
     #exp;
 
-    constructor(gid, exp) {
+    constructor(gid, ts, exp) {
         this.#gid = gid;
+        this.#ts =  ts;
         this.#exp = exp;
     }
 
     get gid() {
         return this.#gid;
+    }
+
+    get ts() {
+        return this.#ts;
     }
 
     get exp() {
@@ -80,7 +88,7 @@ class VarDefine {
     }
 
     toString() {
-        return `define ${this.gid.toString()} as ${checkIndent(this.#exp.toString())}`;
+        return `define ${this.#gid.toString()} ${this.#ts.toString()} as ${checkIndent(this.#exp.toString())}`;
     }
 }
 
@@ -785,6 +793,14 @@ class Identifier {
             return FList.EMPTY;
         }
 
+        typeEquals(type) {
+            if (type instanceof Identifier.#BaseID) {
+                return this.#name == type.name;
+            }
+
+            return false;
+        }
+
         accept(visitor) {
             return visitor.forBaseID(this);
         }
@@ -811,6 +827,10 @@ class Identifier {
             return visitor.visitGenericID(this);
         }
 
+        typeEquals(type) {
+            throw new Error("Generic ID's are not types.");
+        }
+
         toString() {
             return this.name + this.#generics.format(", ", "{", "}");
         }
@@ -831,6 +851,10 @@ class Identifier {
 
         accept(visitor) {
             return visitor.visitTypedID(this);
+        }
+
+        typeEquals(type) {
+            throw new Error("Typed ID's are not types.");
         }
 
         toString() {
@@ -998,7 +1022,7 @@ class TypeSig {
         }
 
         typeEquals(type) {
-            return type instanceof TypeSig.#Bool;
+            return type instanceof TypeSig.#TypeBool;
         }
 
         toString() {
@@ -1152,23 +1176,6 @@ class TypeSig {
         }
     }
 
-    // This type is used for type checking...
-    // CANNOT be specified in syntax.
-    static #TypeAny = class {
-        accept(visitor) {
-            return visitor.visitTypeAny(this);
-        }
-
-        typeEquals(type) {
-            return type instanceof TypeSig.#TypeAny;
-        }
-
-        toString() {
-            return "?";
-        }
-    }
-
-    static ANY = new TypeSig.#TypeAny();
     static VOID = new TypeSig.#TypeStruct(FList.EMPTY);
 }
 

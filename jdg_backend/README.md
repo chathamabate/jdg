@@ -57,7 +57,7 @@ Below are the grammar rules for `JQL`.
 
 <PRG> ::= (<VDF> | <STM>)* <EOF>
 <STM> ::= do <EXP>
-<VDF> ::= define <GID> as <EXP>
+<VDF> ::= define <GID> <GTP> as <EXP>
 <TDF> ::= type <GID> as <GTP>       // Typedef
 
 <EXP> ::= <MAP> | <MAT> | <ORR>

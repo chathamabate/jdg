@@ -7,25 +7,6 @@ class JQLTypeError extends JQLError {
     }
 }
 
-class TypeConformVisitor extends TreeVisitor {
-    #leftType;
-
-    constructor(leftType) {
-        this.#leftType = leftType;
-    }
-
-    visitTypeNum(typeNum) { 
-        if ()
-    }
-
-    visitTypeBool(typeBool) { throw NOT_IMPLEMENTED_ERROR; }
-    visitTypeStr(typeStr) { throw NOT_IMPLEMENTED_ERROR; }
-    visitTypeVec(typeVec) { throw NOT_IMPLEMENTED_ERROR; }
-    visitTypeMap(typeMap) { throw NOT_IMPLEMENTED_ERROR; }
-    visitTypeStruct(typeStruct) { throw NOT_IMPLEMENTED_ERROR; }
-    visitTypeAny(typeAny) { throw NOT_IMPLEMENTED_ERROR; }
-}
-
 class TreeTypeVisitor extends TreeVisitor {
 
     static #constantTypeBinding(type) {
@@ -162,9 +143,9 @@ class TreeTypeVisitor extends TreeVisitor {
         // Here we just check to make sure all cases start with a boolean.
         // And that all the values of the defualt case match...
         // I.E. they're equal.
-        defMatch.cases.map((c) => c.test.accept(this)).foreach((t) => {
-            if (!TreeTypeVisitor.#conformTypes(TypeSig.BOOL, t).typeEquals(TypeSig.BOOL))
-        });
+        // defMatch.cases.map((c) => c.test.accept(this)).foreach((t) => {
+        //     if (!TreeTypeVisitor.#conformTypes(TypeSig.BOOL, t).typeEquals(TypeSig.BOOL))
+        // });
 
 
 
