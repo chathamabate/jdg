@@ -7,6 +7,39 @@ class JQLTypeError extends JQLError {
     }
 }
 
+// Non functional class used for mapping ids to there nearest type
+// resolution. 
+class TypeTable {
+    // String -> FList<TypeSig>
+    #table;
+
+    constructor() { 
+        this.#table = {}
+    }
+
+    contains(id) {
+        return (id in this.#table) && (!this.#table[id].isEmpty);
+    }
+
+    lookUp(id) {
+        return this.#table[id].head;
+    }
+
+    define(id, val) {
+        if (!(id in this.#table)) {
+            this.#table[id] = FList.EMPTY;
+        }
+
+        this.#table[id] = FList.cons(val,  this.#table[id]);
+    }
+
+    pop(id) {
+        this.#table[id] = this.#table[id].tail;
+    }
+}
+
+
+// Non functional visitor for computing the type of a JQL expression.
 class TreeTypeVisitor extends TreeVisitor {
 
     static #constantTypeBinding(type) {
@@ -59,30 +92,15 @@ class TreeTypeVisitor extends TreeVisitor {
         throw new JQLTypeError(`Types do not conform ${type1.toString()} and ${type2.toString()}.`);
     }
 
-    // NOTE, this visitor is NOT functional.
-    // It mutates itself to save time.
-
-    // Bindings will map identifier strings to maps.
-    // A map will take in an FList of Type Signatures and return a type signature.
-    // The maps will bind each given type to its corresponding generic,
-    // Then evaluate the actual expression or type signature.
     #bindings;
 
     constructor() {
         super();
-        
-        this.#bindings = {};
+        this.#bindings = new TypeTable();
     }
 
-    // NOTE, somewhat unsafe here.
     get bindings() {
         return this.#bindings;
-    }
-
-    #checkFreeName(name) {
-        if (name in this.#bindings) {
-            throw new JQLTypeError("Identifier " + name + " is already defined in scope.");
-        }
     }
 
     visitProgram(program) { 
