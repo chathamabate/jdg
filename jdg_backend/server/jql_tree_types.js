@@ -224,7 +224,7 @@ class Argument {
     // Type signature.
     #ts;
 
-    // VarID.
+    // BaseID.
     #vid;
 
     constructor(ts, vid) {
@@ -811,7 +811,7 @@ class Identifier {
     }
 
     static #GenericID = class extends Identifier.#BaseID {
-        // FList<Identifier>
+        // FList<BaseID>
         #generics;
 
         constructor(name, generics) {

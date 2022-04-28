@@ -1,4 +1,4 @@
-const { TreeVisitor, TypeSig, VarDefine } = require("./jql_tree_types");
+const { TreeVisitor, TypeSig, Argument } = require("./jql_tree_types");
 const { FList, JQLError } = require("./utils");
 
 class JQLTypeError extends JQLError {
@@ -8,7 +8,7 @@ class JQLTypeError extends JQLError {
 }
 
 // Non functional class used for mapping ids to there nearest type
-// resolution. 
+// resolution.
 class TypeTable {
     // String -> FList<TypeSig>
     #table;
@@ -58,7 +58,7 @@ class TreeTypeVisitor extends TreeVisitor {
             let gIter = generics;
 
             while (!tpIter.isEmpty && !gIter.isEmpty) {
-                ttVisitor.bindings[gIter.head.name] = TreeTypeVisitor.#constantTypeBinding(tpIter);
+                ttVisitor.bindings.define(gIter.head.name, TreeTypeVisitor.#constantTypeBinding(tpIter));
 
                 tpIter = tpIter.tail;
                 gIter = gIter.tail;
@@ -70,26 +70,10 @@ class TreeTypeVisitor extends TreeVisitor {
 
             let result = type.accept(ttVisitor);
 
-            generics.foreach((bid) => delete ttVisitor.bindings[bid.name]);
+            generics.foreach((bid) => ttVisitor.bindings.pop(bid.name));
 
             return result;
         };
-    }
-
-    static #conformTypes(type1, type2) {
-        if (TypeSig.ANY.typeEquals(type1)) {
-            return type2;
-        }
-
-        if (TypeSig.ANY.typeEquals(type2)) {
-            return type1;
-        }
-
-        if (type1.typeEquals(type2)) {
-            return type1;
-        }
-
-        throw new JQLTypeError(`Types do not conform ${type1.toString()} and ${type2.toString()}.`);
     }
 
     #bindings;
@@ -113,67 +97,96 @@ class TreeTypeVisitor extends TreeVisitor {
         return TypeSig.VOID;
     }
 
-    visitVarDefine(varDefine) { 
-        let gid = varDefine.gid;
-        let name = gid.name;
+    // Method for factoring out the 
+    #bindGenericID(gid, ts, exp = null) {
+        let genericIDSet = new Set();
 
-        this.#checkFreeName(name);
-
-        let generics = gid.generics;
-
-        // This allows for recursion...
-        this.#bindings[name] = (typedParams) => {
-            if (typedParams.len != generics.len) {
-                throw new JQLTypeError(name + " given incorrect number of typed params. (Recursive Case)");
+        // Define all generics to themselves first.
+        gid.generics.foreach((gen) => {
+            // gen should be of type BaseID.
+            if (genericIDSet.has(gen.name)) {
+                throw new JQLTypeError(`Generic ID ${gid.name} has repeat generics: ${gen.name}`);
             }
 
-            return TypeSig.ANY;
-        };
-
-        // Confirm all generics are free.
-        generics.foreach((bid) => {
-            this.#checkFreeName(bid.name);
-
-            // Set each constant to itself for now.
-            this.#bindings[bid.name] = TreeTypeVisitor.#constantType(bid);
+            genericIDSet.add(gen.name);
+            this.#bindings.define(gen.name, TreeTypeVisitor.#constantTypeBinding(gen));
         });
 
-        // Now compute the type of the constant being defined.
-        // This will include the generic Names.
-        let resultType = varDefine.exp.accept(this);
+        // Construct raw type from the given type signature.
+        let expectedType = ts.accept(this);
 
-        generics.foreach((bid) => delete this.#bindings[bid.name]);
+        if (exp != null) {
+            let actualType = varDefine.exp.accept(this);
 
-        this.#bindings[name] = TreeTypeVisitor.#genericTypeBinding(resultType, generics, this);
+            if (!expectedType.typeEquals(actualType)) {
+                throw new JQLTypeError(`Type mismatch for ${gid.name}, expected: ${expectedType.toString()} ` 
+                + `actual: ${actualType.toString()}`);
+            }
+        }
 
-        return TypeSig.VOID;
+        // Unbind all generics.
+        gid.generics.foreach((gen) => this.#bindings.pop(gen.name));
+
+        // Now bind the defined ID to its type.
+        this.#bindings.define(gid.name, 
+            TreeTypeVisitor.#genericTypeBinding(expectedType, gid.generics, this));
     }
+
+    visitVarDefine(varDefine) { 
+        this.#bindGenericType(varDefine.gid, varDefine.ts, varDefine.exp);
+        return TypeSig.VOID;
+    }  
 
     visitTypeDef(typeDef) { 
-        // Typewise, type def is identical to var define.
-        (new VarDefine(typeDef.gid, typeDef.ts)).accept(this);
+        this.#bindGenericID(typeDef.gid, typeDef.ts);
         return TypeSig.VOID;
     }
 
-    visitCase(cas) { throw NOT_IMPLEMENTED_ERROR; }
+    #checkMatchCases(match, eTestType, eConseqType) {
+        match.cases.foreach((c) => {
+            let testType = c.test.accept(this);
+            if (!testType.typeEquals(eTestType)) {
+                throw new JQLTypeError(`Test of a match is not what's expected. ` + 
+                `expected: ${eTestType.toString()} actual: ${testType.toString()}`);
+            }
+
+            let conseqType = c.conseq.accept(this);
+            if (!conseqType.typeEquals(eConseqType)) {
+                throw new JQLTypeError(`Multiple types returned from single match: ` +
+                `${conseqType.toString()} and ${eConseqType.toString()}`);
+            }
+        });
+    }
 
     visitDefaultMatch(defMatch) { 
         // Here we just check to make sure all cases start with a boolean.
         // And that all the values of the defualt case match...
         // I.E. they're equal.
-        // defMatch.cases.map((c) => c.test.accept(this)).foreach((t) => {
-        //     if (!TreeTypeVisitor.#conformTypes(TypeSig.BOOL, t).typeEquals(TypeSig.BOOL))
-        // });
 
-
-
+        let returnType = defMatch.defaultCase.accept(this);
+        this.#checkMatchCases(defMatch, TypeSig.BOOL, returnType);
+        
+        return returnType;
     }
 
-    visitValueMatch(valMatch) { throw NOT_IMPLEMENTED_ERROR; }
+    visitValueMatch(valMatch) { 
+        let testType = valMatch.pivot.accept(this);
+        let returnType = valMatch.defaultCase.accept(this);
+        this.#checkMatchCases(valMatch, testType, returnType);
+
+        return returnType;
+    }
 
 
     visitArgument(arg) { throw NOT_IMPLEMENTED_ERROR; }
-    visitMap(map) { throw NOT_IMPLEMENTED_ERROR; }
+
+    visitMap(map) { 
+        // First define all arguments...
+        // Maybe change map order of types vs ids???
+        // let inputTypes = map.args.map((arg) => new Argument(arg.) arg.ts.accept(this));
+    }
+
+
     visitOrChain(orChain) { throw NOT_IMPLEMENTED_ERROR; }
     visitAndChain(andChain) { throw NOT_IMPLEMENTED_ERROR; }
     visitNot(not) { throw NOT_IMPLEMENTED_ERROR; }
